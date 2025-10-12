@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <link rel="icon" href="/smol/favicon.ico" type="image/x-icon">
+        <title>smol - Mol* with Console</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            html, body {
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+            }
+            hr {
+                margin: 10px;
+            }
+            h1, h2, h3, h4, h5 {
+                margin-top: 5px;
+                margin-bottom: 3px;
+            }
+            button {
+                padding: 2px;
+            }
+            #app {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+            }
+            #console {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 400px;
+                height: calc(8 * 1.5em + 40px);
+                background-color: rgba(0, 0, 0, 0.7);
+                color: #00ff00;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.5em;
+                display: none;
+                flex-direction: column;
+                z-index: 10000;
+            }
+            #console.visible {
+                display: flex;
+            }
+            #console-output {
+                flex: 1;
+                overflow-y: auto;
+                padding: 10px;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+            #console-output::-webkit-scrollbar {
+                width: 12px;
+            }
+            #console-output::-webkit-scrollbar-track {
+                background: #1a1a1a;
+            }
+            #console-output::-webkit-scrollbar-thumb {
+                background: #2a2a2a;
+            }
+            #console-output::-webkit-scrollbar-thumb:hover {
+                background: #333333;
+            }
+            #console-input-line {
+                display: flex;
+                padding: 5px 10px;
+                border-top: 1px solid rgba(0, 255, 0, 0.3);
+            }
+            #console-prompt {
+                margin-right: 5px;
+            }
+            #console-input {
+                flex: 1;
+                background: transparent;
+                border: none;
+                color: #00ff00;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                outline: none;
+            }
+        </style>
+        <link rel="stylesheet" type="text/css" href="/smol/molstar.css" />
+    </head>
+    <body>
+        <div id="app"></div>
+        <div id="console">
+            <div id="console-output"></div>
+            <div id="console-input-line">
+                <span id="console-prompt">smol></span>
+                <input type="text" id="console-input" autocomplete="off" />
+            </div>
+        </div>
+        <script type="text/javascript" src="/smol/molstar.js"></script>
+        <script type="text/javascript">
+            function getParam(name, regex) {
+                var r = new RegExp(name + '=' + '(' + regex + ')[&]?', 'i');
+                return decodeURIComponent(((window.location.search || '').match(r) || [])[1] || '');
+            }
+
+            var debugMode = getParam('debug-mode', '[^&]+').trim() === '1';
+            if (debugMode) molstar.setDebugMode(debugMode);
+
+            var timingMode = getParam('timing-mode', '[^&]+').trim() === '1';
+            if (timingMode) molstar.setTimingMode(timingMode);
+
+            var hideControls = getParam('hide-controls', '[^&]+').trim() === '1';
+            var collapseLeftPanel = getParam('collapse-left-panel', '[^&]+').trim() === '1';
+            var pdbProvider = getParam('pdb-provider', '[^&]+').trim().toLowerCase();
+            var emdbProvider = getParam('emdb-provider', '[^&]+').trim().toLowerCase();
+            var mapProvider = getParam('map-provider', '[^&]+').trim().toLowerCase();
+            var pixelScale = getParam('pixel-scale', '[^&]+').trim();
+            var pickScale = getParam('pick-scale', '[^&]+').trim();
+            var pickPadding = getParam('pick-padding', '[^&]+').trim();
+            var transparency = getParam('transparency', '[^&]+').trim().toLowerCase();
+            var preferWebgl1 = getParam('prefer-webgl1', '[^&]+').trim() === '1' || void 0;
+            var allowMajorPerformanceCaveat = getParam('allow-major-performance-caveat', '[^&]+').trim() === '1';
+            var powerPreference = getParam('power-preference', '[^&]+').trim().toLowerCase();
+            var illumination = getParam('illumination', '[^&]+').trim() === '1';
+            var resolutionMode = getParam('resolution-mode', '[^&]+').trim().toLowerCase();
+
+            molstar.Viewer.create('app', {
+                disabledExtensions: [],
+                layoutShowControls: false,
+                viewportShowExpand: false,
+                collapseLeftPanel: collapseLeftPanel,
+                pdbProvider: pdbProvider || 'pdbe',
+                emdbProvider: emdbProvider || 'pdbe',
+                volumeStreamingServer: (mapProvider || 'pdbe') === 'rcsb'
+                    ? 'https://maps.rcsb.org'
+                    : 'https://www.ebi.ac.uk/pdbe/densities',
+                pixelScale: parseFloat(pixelScale) || 1,
+                pickScale: parseFloat(pickScale) || 0.25,
+                pickPadding: isNaN(parseFloat(pickPadding)) ? 1 : parseFloat(pickPadding),
+                transparency: transparency || undefined,
+                preferWebgl1: preferWebgl1,
+                allowMajorPerformanceCaveat: allowMajorPerformanceCaveat,
+                powerPreference: powerPreference || 'high-performance',
+                illumination: illumination,
+                resolutionMode: resolutionMode || 'auto'
+            }).then(viewer => {
+                window.viewer = viewer;
+                viewer.plugin.canvas3d?.setProps({ renderer: { backgroundColor: 0x000000 } });
+
+                var snapshotId = getParam('snapshot-id', '[^&]+').trim();
+                if (snapshotId) viewer.setRemoteSnapshot(snapshotId);
+
+                var snapshotUrl = getParam('snapshot-url', '[^&]+').trim();
+                var snapshotUrlType = getParam('snapshot-url-type', '[^&]+').toLowerCase().trim() || 'molj';
+                if (snapshotUrl && snapshotUrlType) viewer.loadSnapshotFromUrl(snapshotUrl, snapshotUrlType);
+
+                var structureUrl = getParam('structure-url', '[^&]+').trim();
+                var structureUrlFormat = getParam('structure-url-format', '[a-z]+').toLowerCase().trim();
+                var structureUrlIsBinary = getParam('structure-url-is-binary', '[^&]+').trim() === '1';
+                if (structureUrl) viewer.loadStructureFromUrl(structureUrl, structureUrlFormat, structureUrlIsBinary);
+
+                var mvsUrl = getParam('mvs-url', '[^&]+').trim();
+                var mvsData = getParam('mvs-data', '[^&]+').trim();
+                var mvsFormat = getParam('mvs-format', '[^&]+').trim() || 'mvsj';
+                if (mvsUrl && mvsData) console.error('Cannot specify mvs-url and mvs-data URL parameters at the same time. Ignoring both.');
+                else if (mvsUrl) viewer.loadMvsFromUrl(mvsUrl, mvsFormat);
+                else if (mvsData) viewer.loadMvsData(mvsData, mvsFormat);
+
+                var pdb = getParam('pdb', '[^&]+').trim();
+                if (pdb) viewer.loadPdb(pdb);
+
+                var pdbIhm = getParam('pdb-ihm', '[^&]+').trim();
+                if (pdbIhm) viewer.loadPdbIhm(pdbIhm);
+                var pdbDev = getParam('pdb-dev', '[^&]+').trim();
+                if (pdbDev) viewer.loadPdbIhm(pdbDev);
+
+                var emdb = getParam('emdb', '[^&]+').trim();
+                if (emdb) viewer.loadEmdb(emdb);
+
+                var afdb = getParam('afdb', '[^&]+').trim();
+                if (afdb) viewer.loadAlphaFoldDb(afdb);
+
+                var modelArchive = getParam('model-archive', '[^&]+').trim();
+                if (modelArchive) viewer.loadModelArchive(modelArchive);
+
+                window.addEventListener('unload', () => {
+                    viewer.dispose();
+                });
+
+                const event = new CustomEvent("molstarViewerCreated", { detail: { viewer } });
+                window.dispatchEvent(event);
+            });
+
+            var consoleDiv = document.getElementById('console');
+            var consoleOutput = document.getElementById('console-output');
+            var consoleInput = document.getElementById('console-input');
+
+            var commandHistory = [];
+            var historyIndex = -1;
+            var currentInput = '';
+
+            function loadHistory() {
+                try {
+                    var saved = localStorage.getItem('molstar-console-history');
+                    if (saved) {
+                        commandHistory = JSON.parse(saved);
+                        historyIndex = commandHistory.length;
+                    }
+                } catch (e) {
+                    console.warn('Failed to load command history:', e);
+                }
+            }
+
+            function saveHistory() {
+                try {
+                    var toSave = commandHistory.slice(-100);
+                    localStorage.setItem('molstar-console-history', JSON.stringify(toSave));
+                } catch (e) {
+                    console.warn('Failed to save command history:', e);
+                }
+            }
+
+            function addToHistory(command) {
+                if (!command || command.trim() === '') return;
+                if (commandHistory.length > 0 && commandHistory[commandHistory.length - 1] === command) {
+                    return;
+                }
+                commandHistory.push(command);
+                saveHistory();
+                historyIndex = commandHistory.length;
+            }
+
+            function navigateHistory(direction) {
+                if (commandHistory.length === 0) return;
+
+                if (historyIndex === commandHistory.length) {
+                    currentInput = consoleInput.value;
+                }
+
+                if (direction === 'up') {
+                    if (historyIndex > 0) {
+                        historyIndex--;
+                        consoleInput.value = commandHistory[historyIndex];
+                    }
+                } else if (direction === 'down') {
+                    if (historyIndex < commandHistory.length - 1) {
+                        historyIndex++;
+                        consoleInput.value = commandHistory[historyIndex];
+                    } else {
+                        historyIndex = commandHistory.length;
+                        consoleInput.value = currentInput;
+                    }
+                }
+
+                consoleInput.setSelectionRange(consoleInput.value.length, consoleInput.value.length);
+            }
+
+            function addConsoleOutput(text) {
+                consoleOutput.textContent += text + '\n';
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
+
+            function showConsole() {
+                consoleDiv.classList.add('visible');
+                consoleInput.focus();
+            }
+
+            function hideConsole() {
+                consoleDiv.classList.remove('visible');
+            }
+
+            loadHistory();
+
+            consoleOutput.addEventListener('wheel', function(e) {
+                consoleOutput.scrollTop += e.deltaY;
+                e.preventDefault();
+                e.stopPropagation();
+            }, { passive: false });
+
+            showConsole();
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'F2') {
+                    e.preventDefault();
+                    if (consoleDiv.classList.contains('visible')) {
+                        hideConsole();
+                    } else {
+                        showConsole();
+                    }
+                } else if (e.key === 'Enter' && !consoleDiv.classList.contains('visible')) {
+                    e.preventDefault();
+                    showConsole();
+                }
+            });
+
+            consoleInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    hideConsole();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    navigateHistory('up');
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    navigateHistory('down');
+                } else if (e.key === 'Enter') {
+                    var command = consoleInput.value.trim();
+                    if (command) {
+                        addConsoleOutput('smol> ' + command);
+                        addToHistory(command);
+                        executeCommand(command);
+                        consoleInput.value = '';
+                        historyIndex = commandHistory.length;
+                        currentInput = '';
+                    }
+                }
+            });
+
+            function executeCommand(command) {
+                if (window.viewer && window.viewer.plugin && window.viewer.plugin.console) {
+                    window.viewer.plugin.console.execute(command).then(function(result) {
+                        if (result.success) {
+                            if (result.message) {
+                                addConsoleOutput(result.message);
+                            }
+                            if (result.data) {
+                                addConsoleOutput(JSON.stringify(result.data, null, 2));
+                            }
+                        } else {
+                            addConsoleOutput('Error: ' + result.message);
+                        }
+                    }).catch(function(error) {
+                        addConsoleOutput('Exception: ' + (error.message || String(error)));
+                    });
+                    return;
+                }
+
+                var parts = command.split(/\s+/);
+                var cmd = parts[0].toLowerCase();
+
+                if (cmd === 'help') {
+                    executeHelpCommand(parts.slice(1).join(' '));
+                } else if (cmd === 'load' && parts.length >= 2) {
+                    executeLoadCommand(parts[1]);
+                } else if (cmd === 'close') {
+                    executeCloseCommand();
+                } else if (cmd === 'color') {
+                    executeColorCommand(command);
+                } else {
+                    addConsoleOutput('Error: Unknown command. Type \'help\' for available commands.');
+                }
+            }
+
+            function executeHelpCommand(commandName) {
+                var result = molstar.executeHelp(window.viewer ? window.viewer.plugin : null, commandName);
+                if (result.success && result.helpText) {
+                    addConsoleOutput(result.helpText);
+                } else if (result.message) {
+                    addConsoleOutput(result.message);
+                }
+            }
+
+            function executeLoadCommand(pdbId) {
+                if (!window.viewer) {
+                    addConsoleOutput('Error: Viewer not initialized');
+                    return;
+                }
+                addConsoleOutput('Loading PDB entry: ' + pdbId);
+                window.viewer.plugin.clear();
+                window.viewer.loadPdb(pdbId);
+            }
+
+            function executeCloseCommand() {
+                addConsoleOutput('Clearing all structures');
+                if (window.viewer) {
+                    window.viewer.plugin.clear();
+                }
+            }
+
+            function executeColorCommand(commandStr) {
+                if (!window.viewer) {
+                    addConsoleOutput('Error: No structure loaded. Use "load <pdbid>" first.');
+                    return;
+                }
+
+                try {
+                    var colorCmd = molstar.parseColorCommand(commandStr);
+
+                    if (colorCmd.mode === 'unknown') {
+                        addConsoleOutput('Error: Invalid color command syntax');
+                        return;
+                    }
+
+                    if (colorCmd.mode === 'simple') {
+                        molstar.executeSimpleColor(window.viewer.plugin, colorCmd).then(function(result) {
+                            addConsoleOutput(result.message);
+                        }).catch(function(error) {
+                            addConsoleOutput('Error: ' + error);
+                        });
+                    } else {
+                        addConsoleOutput('Error: Color mode "' + colorCmd.mode + '" not yet implemented');
+                    }
+                } catch (error) {
+                    addConsoleOutput('Error: ' + error.message);
+                }
+            }
+
+            addConsoleOutput('welcome to smol.  type \'help\' for help');
+        </script>
+    </body>
+</html>
