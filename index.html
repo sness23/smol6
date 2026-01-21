@@ -210,6 +210,17 @@
                         addConsoleOutput('Loading file: ' + filePath);
                         viewer.loadStructureFromUrl(fileUrl, format, false);
                     });
+
+                    // Listen for remote commands (via HTTP server on port 8888)
+                    window.ipcRenderer.on('execute-command', function(event, command) {
+                        // Show the console if hidden
+                        showConsole();
+                        // Display the command as if typed
+                        addConsoleOutput('smol> ' + command);
+                        addToHistory(command);
+                        // Execute it
+                        executeCommand(command);
+                    });
                 }
             });
 

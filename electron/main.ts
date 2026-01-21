@@ -2,6 +2,9 @@ import { app, BrowserWindow, globalShortcut } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
+import http from 'node:http'
+
+const COMMAND_PORT = 8888
 
 // Get file path from command line arguments (skip electron args)
 function getFileFromArgs(): string | null {
@@ -41,6 +44,55 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
 
 let win: BrowserWindow | null
+let commandServer: http.Server | null = null
+
+function startCommandServer() {
+  commandServer = http.createServer((req, res) => {
+    // CORS headers for flexibility
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(200)
+      res.end()
+      return
+    }
+
+    if (req.method === 'POST' && req.url === '/command') {
+      let body = ''
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString()
+      })
+      req.on('end', () => {
+        const command = body.trim()
+        if (command && win) {
+          win.webContents.send('execute-command', command)
+          res.writeHead(200, { 'Content-Type': 'text/plain' })
+          res.end('OK: ' + command)
+        } else {
+          res.writeHead(400, { 'Content-Type': 'text/plain' })
+          res.end('Error: No command or no window')
+        }
+      })
+    } else {
+      res.writeHead(404, { 'Content-Type': 'text/plain' })
+      res.end('Not found. POST to /command')
+    }
+  })
+
+  commandServer.listen(COMMAND_PORT, '127.0.0.1', () => {
+    console.log(`Command server listening on http://127.0.0.1:${COMMAND_PORT}`)
+  })
+
+  commandServer.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${COMMAND_PORT} is already in use`)
+    } else {
+      console.error('Command server error:', err)
+    }
+  })
+}
 
 function createWindow() {
   win = new BrowserWindow({
@@ -106,9 +158,15 @@ app.on('activate', () => {
 app.on('will-quit', () => {
   // Unregister all shortcuts before quitting
   globalShortcut.unregisterAll()
+  // Close command server
+  if (commandServer) {
+    commandServer.close()
+    commandServer = null
+  }
 })
 
 app.whenReady().then(() => {
   fileToLoad = getFileFromArgs()
   createWindow()
+  startCommandServer()
 })
