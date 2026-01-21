@@ -1,6 +1,24 @@
 import { app, BrowserWindow, globalShortcut } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import fs from 'node:fs'
+
+// Get file path from command line arguments (skip electron args)
+function getFileFromArgs(): string | null {
+  const args = process.argv.slice(app.isPackaged ? 1 : 2)
+  for (const arg of args) {
+    // Skip flags
+    if (arg.startsWith('-')) continue
+    // Check if it's a file path
+    const resolved = path.isAbsolute(arg) ? arg : path.resolve(process.cwd(), arg)
+    if (fs.existsSync(resolved)) {
+      return resolved
+    }
+  }
+  return null
+}
+
+let fileToLoad: string | null = null
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -43,6 +61,11 @@ function createWindow() {
     // Set zoom level after page loads (3.0 = 300%)
     win?.webContents.setZoomFactor(3.0)
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
+
+    // Send file to load if provided via command line
+    if (fileToLoad) {
+      win?.webContents.send('load-file', fileToLoad)
+    }
   })
 
   if (VITE_DEV_SERVER_URL) {
@@ -53,7 +76,7 @@ function createWindow() {
   }
 }
 
-function registerZoomShortcuts(window: BrowserWindow) {
+function registerZoomShortcuts(_window: BrowserWindow) {
   // Note: Ctrl+= and Ctrl+- conflict with Chrome's built-in zoom shortcuts
   // and cannot be reliably overridden in Electron. All zoom shortcuts have been removed.
   // Chrome's native zoom shortcuts will still work for page zoom.
@@ -85,4 +108,7 @@ app.on('will-quit', () => {
   globalShortcut.unregisterAll()
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  fileToLoad = getFileFromArgs()
+  createWindow()
+})

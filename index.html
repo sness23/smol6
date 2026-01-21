@@ -192,6 +192,25 @@
 
                 const event = new CustomEvent("molstarViewerCreated", { detail: { viewer } });
                 window.dispatchEvent(event);
+
+                // Listen for file to load from command line (via Electron IPC)
+                if (window.ipcRenderer) {
+                    window.ipcRenderer.on('load-file', function(event, filePath) {
+                        var ext = filePath.split('.').pop().toLowerCase();
+                        var format = ext;
+                        // Map common extensions to Mol* format names
+                        if (ext === 'pdb') format = 'pdb';
+                        else if (ext === 'sdf' || ext === 'mol') format = 'sdf';
+                        else if (ext === 'mol2') format = 'mol2';
+                        else if (ext === 'cif' || ext === 'mmcif') format = 'mmcif';
+                        else if (ext === 'xyz') format = 'xyz';
+                        else if (ext === 'gro') format = 'gro';
+
+                        var fileUrl = 'file://' + filePath;
+                        addConsoleOutput('Loading file: ' + filePath);
+                        viewer.loadStructureFromUrl(fileUrl, format, false);
+                    });
+                }
             });
 
             var consoleDiv = document.getElementById('console');
