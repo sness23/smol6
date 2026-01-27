@@ -1,0 +1,70 @@
+#!/bin/bash
+# smol-play - Play a script of smol commands with timing
+# Usage: smol-play <script.smol>
+#
+# Script format:
+#   # comments start with hash
+#   load 1crn          # regular command
+#   @2                 # wait 2 seconds
+#   color red          # another command
+#   @1.5               # wait 1.5 seconds
+
+SMOL_PORT="${SMOL_PORT:-8888}"
+SMOL_HOST="${SMOL_HOST:-127.0.0.1}"
+DEFAULT_DELAY="${SMOL_DELAY:-0.5}"
+
+if [ $# -eq 0 ]; then
+    echo "Usage: smol-play <script.smol>"
+    echo ""
+    echo "Script format:"
+    echo "  # comments"
+    echo "  load 1crn       # command"
+    echo "  @2              # wait 2 seconds"
+    echo "  @               # wait default (0.5s)"
+    echo ""
+    echo "Environment variables:"
+    echo "  SMOL_PORT   (default: 8888)"
+    echo "  SMOL_HOST   (default: 127.0.0.1)"
+    echo "  SMOL_DELAY  (default: 0.5)"
+    exit 1
+fi
+
+SCRIPT="$1"
+
+if [ ! -f "$SCRIPT" ]; then
+    echo "Error: Script file not found: $SCRIPT"
+    exit 1
+fi
+
+echo "Playing: $SCRIPT"
+echo "---"
+
+while IFS= read -r line || [ -n "$line" ]; do
+    # Skip empty lines and comments
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+
+    # Strip inline comments
+    line="${line%%#*}"
+    line="${line%% }"
+
+    # Check for delay directive
+    if [[ "$line" =~ ^@([0-9]*\.?[0-9]*)$ ]]; then
+        delay="${BASH_REMATCH[1]}"
+        [ -z "$delay" ] && delay="$DEFAULT_DELAY"
+        echo "[wait ${delay}s]"
+        sleep "$delay"
+        continue
+    fi
+
+    # Send command
+    echo "> $line"
+    curl -s -X POST "http://${SMOL_HOST}:${SMOL_PORT}/command" -d "$line"
+    echo ""
+
+    # Default small delay between commands
+    sleep "$DEFAULT_DELAY"
+
+done < "$SCRIPT"
+
+echo "---"
+echo "Done."

@@ -1,0 +1,58 @@
+#!/bin/bash
+# smol-record - Record screen while playing a smol script
+# Usage: smol-record <script.smol> [output.mp4]
+#
+# Requires: ffmpeg with x11grab
+
+SCRIPT="$1"
+OUTPUT="${2:-recording-$(date +%Y%m%d-%H%M%S).mp4}"
+
+if [ $# -eq 0 ]; then
+    echo "Usage: smol-record <script.smol> [output.mp4]"
+    echo ""
+    echo "Records screen while playing a smol script."
+    echo "Press 'q' in the ffmpeg window to stop recording."
+    echo ""
+    echo "Environment variables:"
+    echo "  DISPLAY      (default: :0)"
+    echo "  RECORD_SIZE  (default: 1920x1080)"
+    echo "  RECORD_FPS   (default: 30)"
+    exit 1
+fi
+
+if [ ! -f "$SCRIPT" ]; then
+    echo "Error: Script file not found: $SCRIPT"
+    exit 1
+fi
+
+DISPLAY="${DISPLAY:-:0}"
+SIZE="${RECORD_SIZE:-1920x1080}"
+FPS="${RECORD_FPS:-30}"
+
+echo "Recording to: $OUTPUT"
+echo "Display: $DISPLAY, Size: $SIZE, FPS: $FPS"
+echo ""
+echo "Starting in 3 seconds... (position your smol window)"
+sleep 3
+
+# Start ffmpeg in background
+ffmpeg -y -f x11grab -framerate "$FPS" -video_size "$SIZE" \
+    -i "$DISPLAY" -c:v libx264 -preset ultrafast -crf 18 \
+    "$OUTPUT" &
+FFMPEG_PID=$!
+
+# Give ffmpeg time to start
+sleep 1
+
+# Play the script
+./smol-play "$SCRIPT"
+
+# Wait a bit for final frame
+sleep 2
+
+# Stop recording
+kill -INT $FFMPEG_PID 2>/dev/null
+wait $FFMPEG_PID 2>/dev/null
+
+echo ""
+echo "Recording saved: $OUTPUT"

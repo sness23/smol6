@@ -213,8 +213,10 @@
 
                     // Listen for remote commands (via HTTP server on port 8888)
                     window.ipcRenderer.on('execute-command', function(event, command) {
-                        // Show the console if hidden
-                        showConsole();
+                        // Only auto-show console if consoleAutoShow is true
+                        if (consoleAutoShow) {
+                            showConsole();
+                        }
                         // Display the command as if typed
                         addConsoleOutput('smol> ' + command);
                         addToHistory(command);
@@ -231,6 +233,7 @@
             var commandHistory = [];
             var historyIndex = -1;
             var currentInput = '';
+            var consoleAutoShow = true;  // When false, remote commands won't auto-show console
 
             function loadHistory() {
                 try {
@@ -318,10 +321,12 @@
                     if (consoleDiv.classList.contains('visible')) {
                         hideConsole();
                     } else {
+                        consoleAutoShow = true;  // User explicitly showing console
                         showConsole();
                     }
                 } else if (e.key === 'Enter' && !consoleDiv.classList.contains('visible')) {
                     e.preventDefault();
+                    consoleAutoShow = true;  // User explicitly showing console
                     showConsole();
                 }
             });
@@ -352,12 +357,35 @@
             function executeCommand(command) {
                 if (window.viewer && window.viewer.plugin && window.viewer.plugin.console) {
                     window.viewer.plugin.console.execute(command).then(function(result) {
+                        // Handle console actions (hide/show/toggle)
+                        var consoleAction = result.data && result.data.data && result.data.data.consoleAction;
+                        if (consoleAction) {
+                            if (consoleAction === 'hide') {
+                                consoleAutoShow = false;
+                                if (result.message) addConsoleOutput(result.message);
+                                hideConsole();
+                                return;
+                            } else if (consoleAction === 'show') {
+                                consoleAutoShow = true;
+                                showConsole();
+                                if (result.message) addConsoleOutput(result.message);
+                                return;
+                            } else if (consoleAction === 'toggle') {
+                                if (consoleDiv.classList.contains('visible')) {
+                                    consoleAutoShow = false;
+                                    hideConsole();
+                                } else {
+                                    consoleAutoShow = true;
+                                    showConsole();
+                                }
+                                if (result.message) addConsoleOutput(result.message);
+                                return;
+                            }
+                        }
+
                         if (result.success) {
                             if (result.message) {
                                 addConsoleOutput(result.message);
-                            }
-                            if (result.data) {
-                                addConsoleOutput(JSON.stringify(result.data, null, 2));
                             }
                         } else {
                             addConsoleOutput('Error: ' + result.message);

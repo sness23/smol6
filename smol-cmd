@@ -1,0 +1,25 @@
+#!/bin/bash
+# smol-cmd - Send commands to the smol molecular viewer
+# Usage: smol-cmd <command>
+# Example: smol-cmd "load 1cbs"
+
+SMOL_PORT="${SMOL_PORT:-8888}"
+SMOL_HOST="${SMOL_HOST:-127.0.0.1}"
+
+if [ $# -eq 0 ]; then
+    echo "Usage: smol-cmd <command>"
+    echo "       smol-cmd load 1cbs"
+    echo "       smol-cmd color red"
+    echo "       smol-cmd close"
+    echo ""
+    echo "Environment variables:"
+    echo "  SMOL_PORT  (default: 8888)"
+    echo "  SMOL_HOST  (default: 127.0.0.1)"
+    exit 1
+fi
+
+# Join all arguments as the command
+CMD="$*"
+
+curl -s -X POST "http://${SMOL_HOST}:${SMOL_PORT}/command" -d "$CMD"
+echo ""

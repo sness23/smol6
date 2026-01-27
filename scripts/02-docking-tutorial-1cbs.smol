@@ -1,0 +1,41 @@
+# Docking Tutorial: Retinol Binding Protein (1CBS)
+# Protein with bound ligand - intro to protein-ligand interactions
+
+# Load the structure with ligand
+load 1cbs
+@3
+
+# Show overall structure in cartoon
+style cartoon
+@2
+
+# Color the protein blue
+color blue
+@2
+
+# This structure has a bound ligand (retinol)
+# Focus on the binding pocket
+focus :A and 1-50
+@3
+
+# Switch to ball-and-stick to see ligand clearly
+style ball-and-stick
+@2
+
+# Reset to see full structure
+reset
+@2
+
+# Surface view shows binding pocket shape
+style surface
+@3
+
+# Back to cartoon for final view
+style cartoon
+@2
+
+# Color scheme: protein gray, ligand area highlighted
+color gray
+@1
+color orange :A and 1-20
+@2

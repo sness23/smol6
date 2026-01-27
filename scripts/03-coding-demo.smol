@@ -1,0 +1,59 @@
+# Coding Demo: smol-cmd basics
+# Shows the commands you can use to control smol
+
+# First, clear any existing structures
+close
+@1
+
+# Load a structure by PDB ID
+load 4hhb
+@3
+
+# 4HHB is hemoglobin - 4 chains (A, B, C, D)
+
+# Basic styling
+style cartoon
+@2
+
+# Color all atoms
+color red
+@2
+
+# Color specific chains
+color blue :A
+@1
+color green :B
+@1
+color yellow :C
+@1
+color orange :D
+@2
+
+# Focus on chain A
+focus :A
+@2
+
+# Reset camera
+reset
+@1
+
+# Show other representation styles
+style spacefill
+@2
+
+style ball-and-stick
+@2
+
+style lines
+@2
+
+style surface
+@3
+
+# Back to cartoon for clean view
+style cartoon
+color cyan
+@2
+
+# Close when done
+# close

@@ -1,0 +1,45 @@
+# Molecule Tour: Crambin (1CRN)
+# A small plant protein - great intro to molecular visualization
+
+# Load the structure
+load 1crn
+@3
+
+# Default cartoon view - show the fold
+@2
+
+# Switch to spacefill - see the atoms
+style spacefill
+@2
+
+# Ball and stick - bonds visible
+style ball-and-stick
+@2
+
+# Back to cartoon
+style cartoon
+@2
+
+# Color by chain (crambin is single chain, but demo the command)
+color blue :A
+@2
+
+# Highlight the alpha carbons
+color red @CA
+@2
+
+# Focus on backbone
+focus @CA
+@2
+
+# Reset view
+reset
+@2
+
+# Show surface representation
+style surface
+@3
+
+# End on cartoon
+style cartoon
+@2

@@ -1,0 +1,38 @@
+#!/bin/bash
+# smol-repl - Interactive REPL for the smol molecular viewer
+# Type commands and press Enter to send them to smol
+
+SMOL_PORT="${SMOL_PORT:-8888}"
+SMOL_HOST="${SMOL_HOST:-127.0.0.1}"
+HISTFILE="${HOME}/.smol_history"
+
+# If not already wrapped with rlwrap, re-exec with rlwrap for readline support
+if [ -z "$SMOL_RLWRAP" ] && command -v rlwrap &> /dev/null; then
+    SMOL_RLWRAP=1 exec rlwrap -H "$HISTFILE" -s 1000 "$0" "$@"
+fi
+
+echo "smol-repl - Interactive command interface"
+echo "Type commands to send to smol (Ctrl+D or 'quit' to exit)"
+echo ""
+
+while true; do
+    printf "smol> "
+    read -r cmd || break
+
+    # Skip empty lines
+    [ -z "$cmd" ] && continue
+
+    # Exit on quit/exit
+    [ "$cmd" = "quit" ] || [ "$cmd" = "exit" ] && break
+
+    # Send command to smol
+    response=$(curl -s -X POST "http://${SMOL_HOST}:${SMOL_PORT}/command" -d "$cmd" 2>&1)
+    if [ $? -eq 0 ]; then
+        echo "$response"
+    else
+        echo "Error: Could not connect to smol at ${SMOL_HOST}:${SMOL_PORT}"
+    fi
+done
+
+echo ""
+echo "Goodbye!"
