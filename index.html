@@ -472,8 +472,8 @@
             (function() {
                 if (!window.ipcRenderer) return;
 
-                var ROTATE_SCALE = 0.0000625;
-                var TRANSLATE_SCALE = 0.003125;
+                var ROTATE_SCALE = 0.000015625;
+                var TRANSLATE_SCALE = 0.00078125;
 
                 window.ipcRenderer.on('spacemouse-event', function(event, data) {
                     try {
