@@ -1,10 +1,12 @@
-import { app, BrowserWindow, globalShortcut } from 'electron'
+import { app, BrowserWindow, globalShortcut, Menu } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
 import http from 'node:http'
+import { WebSocketServer, WebSocket } from 'ws'
 
 const COMMAND_PORT = 8888
+const SPACEMOUSE_WS_PORT = 8889
 
 // Get file path from command line arguments (skip electron args)
 function getFileFromArgs(): string | null {
@@ -45,6 +47,32 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 
 
 let win: BrowserWindow | null
 let commandServer: http.Server | null = null
+let spacemouseWss: WebSocketServer | null = null
+
+function startSpacemouseServer() {
+  spacemouseWss = new WebSocketServer({ port: SPACEMOUSE_WS_PORT, host: '127.0.0.1' })
+  console.log(`SpaceMouse WebSocket server listening on ws://127.0.0.1:${SPACEMOUSE_WS_PORT}`)
+
+  spacemouseWss.on('connection', (ws: WebSocket) => {
+    console.log('SpaceMouse client connected')
+    ws.on('message', (data: Buffer) => {
+      if (win) {
+        win.webContents.send('spacemouse-event', data.toString())
+      }
+    })
+    ws.on('close', () => {
+      console.log('SpaceMouse client disconnected')
+    })
+  })
+
+  spacemouseWss.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`SpaceMouse WebSocket port ${SPACEMOUSE_WS_PORT} already in use`)
+    } else {
+      console.error('SpaceMouse WebSocket error:', err)
+    }
+  })
+}
 
 function startCommandServer() {
   commandServer = http.createServer((req, res) => {
@@ -102,8 +130,15 @@ function createWindow() {
     },
   })
 
-  // Remove the menu bar
-  win.setMenu(null)
+  // Minimal menu with DevTools shortcut (F12)
+  const menu = Menu.buildFromTemplate([{
+    label: 'Dev',
+    submenu: [
+      { role: 'toggleDevTools', accelerator: 'F12' },
+    ],
+  }])
+  win.setMenu(menu)
+  win.setMenuBarVisibility(false)
 
   // Register zoom keyboard shortcuts
   registerZoomShortcuts(win)
@@ -163,10 +198,16 @@ app.on('will-quit', () => {
     commandServer.close()
     commandServer = null
   }
+  // Close spacemouse server
+  if (spacemouseWss) {
+    spacemouseWss.close()
+    spacemouseWss = null
+  }
 })
 
 app.whenReady().then(() => {
   fileToLoad = getFileFromArgs()
   createWindow()
   startCommandServer()
+  startSpacemouseServer()
 })
