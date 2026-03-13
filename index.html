@@ -544,17 +544,27 @@
                                 var newUpY = uy*cosB + newFy*sinB;
                                 var newUpZ = uz*cosB + newFz*sinB;
 
-                                // Translate target
+                                // Rotate around forward axis (rz - roll)
+                                var cosC = Math.cos(rz), sinC = Math.sin(rz);
+                                // Recompute right vector after previous rotations
+                                var newRightX = newFy*newUpZ - newFz*newUpY;
+                                var newRightY = newFz*newUpX - newFx*newUpZ;
+                                var newRightZ = newFx*newUpY - newFy*newUpX;
+                                var rLen2 = Math.sqrt(newRightX*newRightX + newRightY*newRightY + newRightZ*newRightZ);
+                                newRightX /= rLen2; newRightY /= rLen2; newRightZ /= rLen2;
+                                // Roll: rotate up vector around forward axis
+                                var rolledUpX = newUpX*cosC + newRightX*sinC;
+                                var rolledUpY = newUpY*cosC + newRightY*sinC;
+                                var rolledUpZ = newUpZ*cosC + newRightZ*sinC;
+                                newUpX = rolledUpX; newUpY = rolledUpY; newUpZ = rolledUpZ;
+
+                                // Translate target (x=right, y=up, z=forward)
                                 target[0] += rightX*tx + up[0]*ty + fx*tz;
                                 target[1] += rightY*tx + up[1]*ty + fy*tz;
                                 target[2] += rightZ*tx + up[2]*ty + fz*tz;
 
-                                // Zoom with Z axis
-                                var zoomDist = dist - tz;
-                                if (zoomDist < 1) zoomDist = 1;
-                                var zoomRatio = zoomDist / dist;
-
-                                s.position = [target[0] + dx2*zoomRatio, target[1] + dy2*zoomRatio, target[2] + dz2*zoomRatio];
+                                // Move camera with target (no zoom from tz)
+                                s.position = [target[0] + dx2, target[1] + dy2, target[2] + dz2];
                                 s.target = target;
                                 s.up = [newUpX, newUpY, newUpZ];
                                 return s;
