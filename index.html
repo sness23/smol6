@@ -478,12 +478,30 @@
                 window.ipcRenderer.on('spacemouse-event', function(event, data) {
                     try {
                         var ev = JSON.parse(data);
-                        if (ev.type !== 'motion') return;
 
                         var viewer = window.viewer;
                         if (!viewer || !viewer.plugin || !viewer.plugin.canvas3d) return;
-
                         var canvas3d = viewer.plugin.canvas3d;
+
+                        // Handle clip/fog control events
+                        if (ev.type === 'clipfog') {
+                            var v = ev.value; // 0-127 MIDI range
+                            if (ev.param === 'clipRadius') {
+                                // Map 0-127 to radius 1-200
+                                canvas3d.setProps({ cameraClipping: { radius: 1 + (v / 127) * 199 } });
+                            } else if (ev.param === 'minNear') {
+                                // Map 0-127 to minNear 0.1-50
+                                canvas3d.setProps({ cameraClipping: { minNear: 0.1 + (v / 127) * 49.9 } });
+                            } else if (ev.param === 'fog') {
+                                // Map 0-127 to fog 0-100
+                                var fogVal = (v / 127) * 100;
+                                canvas3d.setProps({ cameraFog: { name: 'on', params: { intensity: fogVal } } });
+                            }
+                            return;
+                        }
+
+                        if (ev.type !== 'motion') return;
+
                         var camera = canvas3d.camera;
                         if (!camera) return;
 
