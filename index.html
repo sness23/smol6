@@ -507,9 +507,9 @@
 
                         // Apply rotation (rx, ry, rz) and translation (x, y, z)
                         var snapshot = camera.getSnapshot();
-                        var rx = ev.rx * ROTATE_SCALE;
-                        var ry = ev.ry * ROTATE_SCALE;
-                        var rz = ev.rz * ROTATE_SCALE;
+                        var rx = -ev.rx * ROTATE_SCALE;
+                        var ry = -ev.ry * ROTATE_SCALE;
+                        var rz = -ev.rz * ROTATE_SCALE;
                         var tx = ev.x * TRANSLATE_SCALE;
                         var ty = -ev.y * TRANSLATE_SCALE;
                         var tz = ev.z * TRANSLATE_SCALE;
