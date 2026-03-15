@@ -116,12 +116,21 @@ function startCommandServer() {
       req.on('data', (chunk: Buffer) => {
         body += chunk.toString()
       })
-      req.on('end', () => {
+      req.on('end', async () => {
         const command = body.trim()
         if (command && win) {
+          // Send command and wait for renderer to reply with result
+          const resultPromise = new Promise<string>((resolve) => {
+            const timeout = setTimeout(() => resolve('OK'), 5000)
+            ipcMain.once('command-result', (_event, result: string) => {
+              clearTimeout(timeout)
+              resolve(result)
+            })
+          })
           win.webContents.send('execute-command', command)
+          const result = await resultPromise
           res.writeHead(200, { 'Content-Type': 'text/plain' })
-          res.end('OK: ' + command)
+          res.end(result)
         } else {
           res.writeHead(400, { 'Content-Type': 'text/plain' })
           res.end('Error: No command or no window')

@@ -228,8 +228,10 @@
                         // Display the command as if typed
                         addConsoleOutput('smol> ' + command);
                         addToHistory(command);
-                        // Execute it
-                        executeCommand(command);
+                        // Execute and send result back to main process
+                        executeCommand(command, function(result) {
+                            window.ipcRenderer.send('command-result', result);
+                        });
                     });
                 }
             });
@@ -373,14 +375,18 @@
                 }
             });
 
-            function executeCommand(command) {
+            function executeCommand(command, onResult) {
+                var cb = onResult || function() {};
+
                 // Handle console overlay/compact locally before molstar dispatch
                 var cmdParts = command.trim().split(/\s+/);
                 if (cmdParts[0].toLowerCase() === 'console' && cmdParts.length > 1) {
                     var sub = cmdParts[1].toLowerCase();
                     if (sub === 'overlay' || sub === 'compact') {
                         setConsoleMode(sub);
-                        addConsoleOutput('Console mode: ' + sub);
+                        var msg = 'Console mode: ' + sub;
+                        addConsoleOutput(msg);
+                        cb(msg);
                         return;
                     }
                 }
@@ -394,11 +400,13 @@
                                 consoleAutoShow = false;
                                 if (result.message) addConsoleOutput(result.message);
                                 hideConsole();
+                                cb(result.message || 'Console hidden');
                                 return;
                             } else if (consoleAction === 'show') {
                                 consoleAutoShow = true;
                                 showConsole();
                                 if (result.message) addConsoleOutput(result.message);
+                                cb(result.message || 'Console shown');
                                 return;
                             } else if (consoleAction === 'toggle') {
                                 if (consoleDiv.classList.contains('visible')) {
@@ -409,14 +417,17 @@
                                     showConsole();
                                 }
                                 if (result.message) addConsoleOutput(result.message);
+                                cb(result.message || 'Console toggled');
                                 return;
                             } else if (consoleAction === 'overlay') {
                                 setConsoleMode('overlay');
                                 if (result.message) addConsoleOutput(result.message);
+                                cb(result.message || 'Console overlay');
                                 return;
                             } else if (consoleAction === 'compact') {
                                 setConsoleMode('compact');
                                 if (result.message) addConsoleOutput(result.message);
+                                cb(result.message || 'Console compact');
                                 return;
                             }
                         }
@@ -425,11 +436,16 @@
                             if (result.message) {
                                 addConsoleOutput(result.message);
                             }
+                            cb(result.message || 'OK');
                         } else {
-                            addConsoleOutput('Error: ' + result.message);
+                            var errMsg = 'Error: ' + result.message;
+                            addConsoleOutput(errMsg);
+                            cb(errMsg);
                         }
                     }).catch(function(error) {
-                        addConsoleOutput('Exception: ' + (error.message || String(error)));
+                        var errMsg = 'Exception: ' + (error.message || String(error));
+                        addConsoleOutput(errMsg);
+                        cb(errMsg);
                     });
                     return;
                 }
@@ -439,14 +455,20 @@
 
                 if (cmd === 'help') {
                     executeHelpCommand(parts.slice(1).join(' '));
+                    cb('OK');
                 } else if (cmd === 'load' && parts.length >= 2) {
                     executeLoadCommand(parts[1]);
+                    cb('Loading PDB entry: ' + parts[1]);
                 } else if (cmd === 'close') {
                     executeCloseCommand();
+                    cb('Clearing all structures');
                 } else if (cmd === 'color') {
                     executeColorCommand(command);
+                    cb('OK');
                 } else {
-                    addConsoleOutput('Error: Unknown command. Type \'help\' for available commands.');
+                    var errMsg = 'Error: Unknown command. Type \'help\' for available commands.';
+                    addConsoleOutput(errMsg);
+                    cb(errMsg);
                 }
             }
 
