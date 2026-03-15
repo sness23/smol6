@@ -94,11 +94,43 @@ npm run dev
 | `color @CA <color>` | Color alpha carbons |
 | `color :A <color>` | Color chain A |
 | `close` | Clear all structures |
+| `console overlay` | Full-screen console overlay (mouse controls terminal, spacemouse/knobs control protein) |
+| `console compact` | Return to small bottom-left console |
+| `console hide` | Hide console |
+| `console show` | Show console |
+| `console toggle` | Toggle console visibility |
 | `help` | Show available commands |
+
+## Settings File (`~/.smol`)
+
+smol6 reads a JSON settings file from `~/.smol` on startup. Create it manually if needed:
+
+```json
+{
+  "consoleMode": "compact",
+  "zoom": 3.0
+}
+```
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `consoleMode` | `"compact"` \| `"overlay"` | `"compact"` | Console mode on startup |
+| `zoom` | number | `3.0` | Window zoom factor (3.0 = 300%) |
+
+Settings are loaded once at startup by `electron/main.ts` and passed to the renderer via IPC (`get-settings` channel). The renderer applies `consoleMode` after initialization.
+
+### Console Overlay Mode
+
+When in overlay mode (`console overlay`), the console covers the entire window with a semi-transparent dark background. This is designed for spacemouse/knob workflows where:
+- The **mouse** interacts with the terminal (typing commands, scrolling output)
+- The **spacemouse** controls protein translation/rotation
+- The **MIDI knobs** control clip/fog/other parameters
+
+Use `console compact` or restart with `"consoleMode": "compact"` to return to the small console.
 
 ## Notes
 
 - React deps in package.json are for Vite plugin compatibility only (app doesn't use React)
 - Chunk size limit set to 10MB for molstar.js
 - D-Bus errors on Linux are harmless
-- Default zoom is 300% (set in `electron/main.ts`)
+- Default zoom is 300% (configurable via `~/.smol`)

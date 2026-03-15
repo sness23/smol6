@@ -1,7 +1,8 @@
-import { app, BrowserWindow, globalShortcut, Menu } from 'electron'
+import { app, BrowserWindow, globalShortcut, ipcMain, Menu } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
+import os from 'node:os'
 import http from 'node:http'
 import { WebSocketServer, WebSocket } from 'ws'
 
@@ -48,6 +49,29 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 
 let win: BrowserWindow | null
 let commandServer: http.Server | null = null
 let spacemouseWss: WebSocketServer | null = null
+
+// Settings file: ~/.smol
+const SETTINGS_PATH = path.join(os.homedir(), '.smol')
+
+interface SmolSettings {
+  consoleMode?: 'compact' | 'overlay'
+  zoom?: number
+  [key: string]: unknown
+}
+
+function loadSettings(): SmolSettings {
+  try {
+    if (fs.existsSync(SETTINGS_PATH)) {
+      const raw = fs.readFileSync(SETTINGS_PATH, 'utf-8')
+      return JSON.parse(raw)
+    }
+  } catch (e) {
+    console.warn('Failed to load ~/.smol settings:', e)
+  }
+  return {}
+}
+
+const settings = loadSettings()
 
 function startSpacemouseServer() {
   spacemouseWss = new WebSocketServer({ port: SPACEMOUSE_WS_PORT, host: '127.0.0.1' })
@@ -145,8 +169,8 @@ function createWindow() {
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
-    // Set zoom level after page loads (3.0 = 300%)
-    win?.webContents.setZoomFactor(3.0)
+    // Set zoom level after page loads (default 3.0 = 300%, configurable via ~/.smol)
+    win?.webContents.setZoomFactor(settings.zoom ?? 3.0)
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
 
     // Send file to load if provided via command line
@@ -207,6 +231,10 @@ app.on('will-quit', () => {
 
 app.whenReady().then(() => {
   fileToLoad = getFileFromArgs()
+
+  // IPC handler for settings
+  ipcMain.handle('get-settings', () => settings)
+
   createWindow()
   startCommandServer()
   startSpacemouseServer()

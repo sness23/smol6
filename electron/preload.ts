@@ -22,3 +22,8 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   // You can expose other APTs you need here.
   // ...
 })
+
+// Expose settings via a separate channel
+contextBridge.exposeInMainWorld('smolSettings', {
+  get: () => ipcRenderer.invoke('get-settings'),
+})

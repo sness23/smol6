@@ -51,6 +51,14 @@
             #console.visible {
                 display: flex;
             }
+            #console.overlay {
+                width: 100%;
+                height: 100%;
+                top: 0;
+                left: 0;
+                background-color: rgba(0, 0, 0, 0.3);
+                font-size: 14px;
+            }
             #console-output {
                 flex: 1;
                 overflow-y: auto;
@@ -234,6 +242,17 @@
             var historyIndex = -1;
             var currentInput = '';
             var consoleAutoShow = true;  // When false, remote commands won't auto-show console
+            var consoleMode = 'compact';  // 'compact' or 'overlay'
+
+            function setConsoleMode(mode) {
+                if (mode === 'overlay') {
+                    consoleDiv.classList.add('overlay');
+                    consoleMode = 'overlay';
+                } else {
+                    consoleDiv.classList.remove('overlay');
+                    consoleMode = 'compact';
+                }
+            }
 
             function loadHistory() {
                 try {
@@ -355,9 +374,20 @@
             });
 
             function executeCommand(command) {
+                // Handle console overlay/compact locally before molstar dispatch
+                var cmdParts = command.trim().split(/\s+/);
+                if (cmdParts[0].toLowerCase() === 'console' && cmdParts.length > 1) {
+                    var sub = cmdParts[1].toLowerCase();
+                    if (sub === 'overlay' || sub === 'compact') {
+                        setConsoleMode(sub);
+                        addConsoleOutput('Console mode: ' + sub);
+                        return;
+                    }
+                }
+
                 if (window.viewer && window.viewer.plugin && window.viewer.plugin.console) {
                     window.viewer.plugin.console.execute(command).then(function(result) {
-                        // Handle console actions (hide/show/toggle)
+                        // Handle console actions (hide/show/toggle/overlay/compact)
                         var consoleAction = result.data && result.data.data && result.data.data.consoleAction;
                         if (consoleAction) {
                             if (consoleAction === 'hide') {
@@ -378,6 +408,14 @@
                                     consoleAutoShow = true;
                                     showConsole();
                                 }
+                                if (result.message) addConsoleOutput(result.message);
+                                return;
+                            } else if (consoleAction === 'overlay') {
+                                setConsoleMode('overlay');
+                                if (result.message) addConsoleOutput(result.message);
+                                return;
+                            } else if (consoleAction === 'compact') {
+                                setConsoleMode('compact');
                                 if (result.message) addConsoleOutput(result.message);
                                 return;
                             }
@@ -467,6 +505,15 @@
             }
 
             addConsoleOutput('welcome to smol.  type \'help\' for help');
+
+            // Apply settings from ~/.smol
+            if (window.smolSettings) {
+                window.smolSettings.get().then(function(settings) {
+                    if (settings.consoleMode) {
+                        setConsoleMode(settings.consoleMode);
+                    }
+                });
+            }
 
             // SpaceMouse 6DOF camera control via IPC from WebSocket bridge
             (function() {
