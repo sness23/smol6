@@ -106,7 +106,7 @@ Row 4:  CC 28 (inner edge)   CC 29 (dpoit)      CC 30 (pick pad)   CC 31 (hi edg
 Row 1:  CC 32 (metalness)   CC 33 (roughness)   CC 34 (bumpiness)   CC 35 (multisample)
 Row 2:  CC 36 (rotate spd)  CC 37 (zoom spd)    CC 38 (pan spd)     CC 39 (move spd)
 Row 3:  CC 40 (boost)       CC 41 (interact fps) CC 42 (reset dur)  CC 43 (dpoit)
-Row 4:  CC 44 (free)        CC 45 (free)         CC 46 (free)        CC 47 (free)
+Row 4:  CC 44 (GI on/off)   CC 45 (GI bounces)   CC 46 (GI shadows)  CC 47 (GI fps)
 ```
 
 | CC | Name | Type | MIDI 0–127 → | Notes |
@@ -123,9 +123,12 @@ Row 4:  CC 44 (free)        CC 45 (free)         CC 46 (free)        CC 47 (free
 | 41 | Interaction FPS | absolute | 10–60 (step 10) | Max interaction framerate |
 | 42 | Reset duration | absolute | 0–1000ms | Camera reset animation speed |
 | 43 | Depth peeling iters | absolute | 1–10 | Transparency quality |
-| 44–47 | Free | — | — | Reserved for future use |
+| 44 | GI enable | boolean | off/on (threshold 64) | Global illumination master switch |
+| 45 | GI bounces | absolute | 1–32 | Light bounces. More = richer indirect light, slower. |
+| 46 | GI shadow enable | boolean | off/on (threshold 64) | Ray-traced shadows |
+| 47 | GI target FPS | absolute | 0–120 | Auto-adjusts quality to hit this framerate. 0 = max quality. |
 
-**Page 3 notes**: Material knobs (CC 32–34) update ALL representations by directly writing to the GPU uniform ValueCells. Roughness is the "shininess" knob — turn it left for mirror-like reflections, right for matte. Row 4 is free for future expansion (GI controls can be added back here later).
+**Page 3 notes**: Material knobs (CC 32–34) update ALL representations by directly writing to the GPU uniform ValueCells. Roughness is the "shininess" knob — turn it left for mirror-like reflections, right for matte. GI essentials on row 4 — turn on CC 44, set target FPS with CC 47, and the system auto-regulates quality.
 
 ## Page 4 Layout (CC 48–63) — Second Light, Debug & Misc
 

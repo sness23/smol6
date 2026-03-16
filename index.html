@@ -663,6 +663,18 @@
                             } else if (ev.param === 'boostFactor') {
                                 // Map 0-127 to boost move factor 0.1-10
                                 canvas3d.setProps({ trackball: { boostMoveFactor: 0.1 + (v / 127) * 9.9 } });
+                            } else if (ev.param === 'giEnable') {
+                                // Boolean: 0-63 = off, 64-127 = on
+                                canvas3d.setProps({ illumination: { enabled: v >= 64 } });
+                            } else if (ev.param === 'giBounces') {
+                                // Map 0-127 to bounces 1-32
+                                canvas3d.setProps({ illumination: { bounces: Math.round(1 + (v / 127) * 31) } });
+                            } else if (ev.param === 'giShadowEnable') {
+                                // Boolean: 0-63 = off, 64-127 = on
+                                canvas3d.setProps({ illumination: { shadowEnable: v >= 64 } });
+                            } else if (ev.param === 'giTargetFps') {
+                                // Map 0-127 to target fps 0-120
+                                canvas3d.setProps({ illumination: { targetFps: Math.round((v / 127) * 120) } });
                             // === Page 4 — Second Light, Debug & Misc ===
                             } else if (ev.param === 'light2Inclination') {
                                 // Map 0-127 to light 2 inclination 0-180 degrees
