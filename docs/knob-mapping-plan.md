@@ -100,35 +100,32 @@ Row 4:  CC 28 (inner edge)   CC 29 (dpoit)      CC 30 (pick pad)   CC 31 (hi edg
 
 **Row 4 (misc)**: Inner edge contrast, transparency quality, pick target size, highlight edge strength.
 
-## Page 3 Layout (CC 32–47) — Global Illumination & Quality
+## Page 3 Layout (CC 32–47) — Materials & Quality
 
 ```
-Row 1:  CC 32 (GI enable)   CC 33 (GI iters)   CC 34 (GI bounces)  CC 35 (GI steps)
-Row 2:  CC 36 (GI ray dist) CC 37 (GI shd on)   CC 38 (GI shd soft) CC 39 (GI shd thick)
-Row 3:  CC 40 (GI glow)     CC 41 (GI 1st step) CC 42 (GI refine)   CC 43 (GI fps)
-Row 4:  CC 44 (multisample)  CC 45 (interact fps) CC 46 (move spd)   CC 47 (boost)
+Row 1:  CC 32 (metalness)   CC 33 (roughness)   CC 34 (bumpiness)   CC 35 (multisample)
+Row 2:  CC 36 (rotate spd)  CC 37 (zoom spd)    CC 38 (pan spd)     CC 39 (move spd)
+Row 3:  CC 40 (boost)       CC 41 (interact fps) CC 42 (reset dur)  CC 43 (dpoit)
+Row 4:  CC 44 (free)        CC 45 (free)         CC 46 (free)        CC 47 (free)
 ```
 
-| CC | Name | Type | MIDI 0–127 → | setProps path |
-|----|------|------|---------------|---------------|
-| 32 | GI enable | boolean | off/on (threshold 64) | `{ illumination: { enabled } }` |
-| 33 | GI iterations | absolute | 0–16 (actual = 2^x) | `{ illumination: { maxIterations } }` |
-| 34 | GI bounces | absolute | 1–32 | `{ illumination: { bounces } }` |
-| 35 | GI steps | absolute | 1–1024 | `{ illumination: { steps } }` |
-| 36 | GI ray distance | absolute | 1–8192 | `{ illumination: { rayDistance } }` |
-| 37 | GI shadow enable | boolean | off/on (threshold 64) | `{ illumination: { shadowEnable } }` |
-| 38 | GI shadow softness | absolute | 0.01–1 | `{ illumination: { shadowSoftness } }` |
-| 39 | GI shadow thickness | absolute | 0.1–32 | `{ illumination: { shadowThickness } }` |
-| 40 | GI glow | boolean | off/on (threshold 64) | `{ illumination: { glow } }` |
-| 41 | GI first step size | absolute | 0.001–1 | `{ illumination: { firstStepSize } }` |
-| 42 | GI refine steps | absolute | 0–8 | `{ illumination: { refineSteps } }` |
-| 43 | GI target FPS | absolute | 0–120 | `{ illumination: { targetFps } }` |
-| 44 | Multisample level | absolute | 0–5 (samples = level²) | `{ multiSample: { sampleLevel } }` |
-| 45 | Interaction FPS | absolute | 10–60 (step 10) | `{ interaction: { maxFps } }` |
-| 46 | Move speed | absolute | 0.1–3 | `{ trackball: { moveSpeed } }` |
-| 47 | Boost move factor | absolute | 0.1–10 | `{ trackball: { boostMoveFactor } }` |
+| CC | Name | Type | MIDI 0–127 → | Notes |
+|----|------|------|---------------|-------|
+| 32 | Metalness | absolute | 0–1 | 0=plastic, 1=metal. Per-representation via ValueCell. |
+| 33 | Roughness | absolute | 0–1 | 0=mirror smooth (shiny!), 1=fully matte. |
+| 34 | Bumpiness | absolute | 0–1 | Perlin noise surface texture. |
+| 35 | Multisample level | absolute | 0–5 (samples = level²) | Anti-aliasing quality |
+| 36 | Rotate speed | absolute | 1–10 | Mouse rotation sensitivity |
+| 37 | Zoom speed | absolute | 1–15 | Scroll wheel sensitivity |
+| 38 | Pan speed | absolute | 0.1–5 | Middle-click pan sensitivity |
+| 39 | Move speed | absolute | 0.1–3 | WASD movement speed |
+| 40 | Boost move factor | absolute | 0.1–10 | Shift+move speed multiplier |
+| 41 | Interaction FPS | absolute | 10–60 (step 10) | Max interaction framerate |
+| 42 | Reset duration | absolute | 0–1000ms | Camera reset animation speed |
+| 43 | Depth peeling iters | absolute | 1–10 | Transparency quality |
+| 44–47 | Free | — | — | Reserved for future use |
 
-**Page 3 notes**: GI is GPU-intensive ray tracing. Turn on CC 32 first, then tune quality with the other knobs. Lower GI steps and bounces for interactive use, raise for stills. GI target FPS (CC 43) lets it self-regulate quality.
+**Page 3 notes**: Material knobs (CC 32–34) update ALL representations by directly writing to the GPU uniform ValueCells. Roughness is the "shininess" knob — turn it left for mirror-like reflections, right for matte. Row 4 is free for future expansion (GI controls can be added back here later).
 
 ## Page 4 Layout (CC 48–63) — Second Light, Debug & Misc
 

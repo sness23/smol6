@@ -650,43 +650,7 @@
                             } else if (ev.param === 'highlightEdgeStrength') {
                                 // Map 0-127 to highlight edge strength 0-1
                                 canvas3d.setProps({ marking: { highlightEdgeStrength: v / 127 } });
-                            // === Page 3 — Global Illumination & Quality ===
-                            } else if (ev.param === 'giEnable') {
-                                // Boolean: 0-63 = off, 64-127 = on
-                                canvas3d.setProps({ illumination: { enabled: v >= 64 } });
-                            } else if (ev.param === 'giIterations') {
-                                // Map 0-127 to max iterations 0-16 (actual = 2^x)
-                                canvas3d.setProps({ illumination: { maxIterations: Math.round((v / 127) * 16) } });
-                            } else if (ev.param === 'giBounces') {
-                                // Map 0-127 to bounces 1-32
-                                canvas3d.setProps({ illumination: { bounces: Math.round(1 + (v / 127) * 31) } });
-                            } else if (ev.param === 'giSteps') {
-                                // Map 0-127 to ray marching steps 1-1024
-                                canvas3d.setProps({ illumination: { steps: Math.round(1 + (v / 127) * 1023) } });
-                            } else if (ev.param === 'giRayDistance') {
-                                // Map 0-127 to ray distance 1-8192
-                                canvas3d.setProps({ illumination: { rayDistance: Math.round(1 + (v / 127) * 8191) } });
-                            } else if (ev.param === 'giShadowEnable') {
-                                // Boolean: 0-63 = off, 64-127 = on
-                                canvas3d.setProps({ illumination: { shadowEnable: v >= 64 } });
-                            } else if (ev.param === 'giShadowSoftness') {
-                                // Map 0-127 to shadow softness 0.01-1
-                                canvas3d.setProps({ illumination: { shadowSoftness: 0.01 + (v / 127) * 0.99 } });
-                            } else if (ev.param === 'giShadowThickness') {
-                                // Map 0-127 to shadow thickness 0.1-32
-                                canvas3d.setProps({ illumination: { shadowThickness: 0.1 + (v / 127) * 31.9 } });
-                            } else if (ev.param === 'giGlow') {
-                                // Boolean: 0-63 = off, 64-127 = on
-                                canvas3d.setProps({ illumination: { glow: v >= 64 } });
-                            } else if (ev.param === 'giFirstStep') {
-                                // Map 0-127 to first step size 0.001-1
-                                canvas3d.setProps({ illumination: { firstStepSize: 0.001 + (v / 127) * 0.999 } });
-                            } else if (ev.param === 'giRefineSteps') {
-                                // Map 0-127 to refine steps 0-8
-                                canvas3d.setProps({ illumination: { refineSteps: Math.round((v / 127) * 8) } });
-                            } else if (ev.param === 'giTargetFps') {
-                                // Map 0-127 to target fps 0-120
-                                canvas3d.setProps({ illumination: { targetFps: Math.round((v / 127) * 120) } });
+                            // === Page 3 — Materials & Quality ===
                             } else if (ev.param === 'multisampleLevel') {
                                 // Map 0-127 to sample level 0-5
                                 canvas3d.setProps({ multiSample: { sampleLevel: Math.round((v / 127) * 5) } });
@@ -724,6 +688,29 @@
                             } else if (ev.param === 'pickingAlpha') {
                                 // Map 0-127 to picking alpha threshold 0-1
                                 canvas3d.setProps({ renderer: { pickingAlphaThreshold: v / 127 } });
+                            } else if (ev.param === 'metalness' || ev.param === 'roughness' || ev.param === 'bumpiness') {
+                                // Map 0-127 to material property 0-1, applied to ALL representations
+                                var matVal = v / 127;
+                                var uniformName = ev.param === 'metalness' ? 'uMetalness' :
+                                                  ev.param === 'roughness' ? 'uRoughness' : 'uBumpiness';
+                                // Iterate all state cells to find representations with render objects
+                                var plugin = viewer.plugin;
+                                plugin.state.data.cells.forEach(function(cell) {
+                                    if (cell && cell.obj && cell.obj.type && cell.obj.type.typeClass === 'Representation3D') {
+                                        var repr = cell.obj.data.repr;
+                                        if (repr && repr.renderObjects) {
+                                            for (var ri = 0; ri < repr.renderObjects.length; ri++) {
+                                                var ro = repr.renderObjects[ri];
+                                                var uc = ro.values[uniformName];
+                                                if (uc && uc.ref) {
+                                                    uc.ref = { id: uc.ref.id, version: uc.ref.version + 1, value: matVal, metadata: uc.ref.metadata };
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+                                canvas3d.commit();
+                                canvas3d.requestDraw();
                             } else if (ev.param === 'selectEdgeStrength') {
                                 // Map 0-127 to select edge strength 0-1
                                 canvas3d.setProps({ marking: { selectEdgeStrength: v / 127 } });
