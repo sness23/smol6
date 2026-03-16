@@ -565,6 +565,37 @@
                                 // Map 0-127 to fog 0-100
                                 var fogVal = (v / 127) * 100;
                                 canvas3d.setProps({ cameraFog: { name: 'on', params: { intensity: fogVal } } });
+                            } else if (ev.param === 'exposure') {
+                                // Map 0-127 to exposure 0-3
+                                canvas3d.setProps({ renderer: { exposure: (v / 127) * 3 } });
+                            } else if (ev.param === 'ambient') {
+                                // Map 0-127 to ambient intensity 0-2
+                                canvas3d.setProps({ renderer: { ambientIntensity: (v / 127) * 2 } });
+                            } else if (ev.param === 'interiorDarkening') {
+                                // Map 0-127 to interior darkening 0-1
+                                canvas3d.setProps({ renderer: { interiorDarkening: v / 127 } });
+                            } else if (ev.param === 'fov') {
+                                // Map 0-127 to FOV 10-130 degrees
+                                canvas3d.setProps({ camera: { fov: 10 + (v / 127) * 120 } });
+                            } else if (ev.param === 'celSteps') {
+                                // Map 0-127 to cel shading steps 2-16
+                                canvas3d.setProps({ renderer: { celSteps: Math.round(2 + (v / 127) * 14) } });
+                            } else if (ev.param === 'lightInclination') {
+                                // Map 0-127 to light inclination 0-180 degrees
+                                var props = canvas3d.props;
+                                var lights = props.renderer.light;
+                                var light0 = Object.assign({}, lights[0], { inclination: (v / 127) * 180 });
+                                var newLights = [light0];
+                                for (var li = 1; li < lights.length; li++) newLights.push(lights[li]);
+                                canvas3d.setProps({ renderer: { light: newLights } });
+                            } else if (ev.param === 'lightAzimuth') {
+                                // Map 0-127 to light azimuth 0-360 degrees
+                                var props = canvas3d.props;
+                                var lights = props.renderer.light;
+                                var light0 = Object.assign({}, lights[0], { azimuth: (v / 127) * 360 });
+                                var newLights = [light0];
+                                for (var li = 1; li < lights.length; li++) newLights.push(lights[li]);
+                                canvas3d.setProps({ renderer: { light: newLights } });
                             }
                             return;
                         }
