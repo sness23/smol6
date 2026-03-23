@@ -378,8 +378,27 @@
             function executeCommand(command, onResult) {
                 var cb = onResult || function() {};
 
-                // Handle console overlay/compact locally before molstar dispatch
+                // Handle "preset default" — global reset of all canvas3d parameters
                 var cmdParts = command.trim().split(/\s+/);
+                if (cmdParts[0].toLowerCase() === 'preset' && cmdParts.length > 1 && cmdParts[1].toLowerCase() === 'default') {
+                    if (_defaultCanvas3dProps && window.viewer && window.viewer.plugin && window.viewer.plugin.canvas3d) {
+                        var c3d = window.viewer.plugin.canvas3d;
+                        var defaults = JSON.parse(JSON.stringify(_defaultCanvas3dProps));
+                        c3d.setProps(defaults);
+                        // Also reset camera view
+                        window.viewer.plugin.managers.camera.reset();
+                        var msg = 'Reset all parameters to defaults';
+                        addConsoleOutput(msg);
+                        cb(msg);
+                    } else {
+                        var msg = 'Error: Viewer not ready or defaults not captured';
+                        addConsoleOutput(msg);
+                        cb(msg);
+                    }
+                    return;
+                }
+
+                // Handle console overlay/compact locally before molstar dispatch
                 if (cmdParts[0].toLowerCase() === 'console' && cmdParts.length > 1) {
                     var sub = cmdParts[1].toLowerCase();
                     if (sub === 'overlay' || sub === 'compact') {
@@ -527,6 +546,17 @@
             }
 
             addConsoleOutput('welcome to smol.  type \'help\' for help');
+
+            // Capture default canvas3d props for "preset default" reset
+            var _defaultCanvas3dProps = null;
+            (function captureDefaults() {
+                if (window.viewer && window.viewer.plugin && window.viewer.plugin.canvas3d) {
+                    var c3d = window.viewer.plugin.canvas3d;
+                    _defaultCanvas3dProps = JSON.parse(JSON.stringify(c3d.props));
+                } else {
+                    setTimeout(captureDefaults, 500);
+                }
+            })();
 
             // Apply settings from ~/.smol
             if (window.smolSettings) {
