@@ -95,11 +95,54 @@
                 font-size: 12px;
                 outline: none;
             }
+            /* Knob HUD badge */
+            #knob-hud {
+                position: absolute;
+                top: 12px;
+                right: 12px;
+                background-color: rgba(0, 0, 0, 0.75);
+                color: #00ff00;
+                font-family: 'Courier New', monospace;
+                font-size: 13px;
+                padding: 6px 12px;
+                border-radius: 4px;
+                border: 1px solid rgba(0, 255, 0, 0.25);
+                z-index: 200000;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.4s ease;
+                white-space: nowrap;
+            }
+            #knob-hud.visible {
+                opacity: 1;
+                transition: opacity 0.05s ease;
+            }
+            #knob-hud-bar {
+                display: inline-block;
+                width: 80px;
+                height: 8px;
+                background-color: rgba(0, 255, 0, 0.15);
+                border-radius: 2px;
+                vertical-align: middle;
+                margin: 0 8px;
+                overflow: hidden;
+            }
+            #knob-hud-fill {
+                height: 100%;
+                background-color: #00ff00;
+                border-radius: 2px;
+                transition: width 0.05s ease;
+            }
         </style>
         <link rel="stylesheet" type="text/css" href="/smol/molstar.css" />
     </head>
     <body>
         <div id="app"></div>
+        <div id="knob-hud">
+            <span id="knob-hud-name"></span>
+            <span id="knob-hud-bar"><span id="knob-hud-fill"></span></span>
+            <span id="knob-hud-value"></span>
+        </div>
         <div id="console">
             <div id="console-output"></div>
             <div id="console-input-line">
@@ -510,6 +553,25 @@
                 window.viewer.loadPdb(pdbId);
             }
 
+            // Knob HUD feedback
+            var _knobHudTimer = null;
+            var _knobHudEl = document.getElementById('knob-hud');
+            var _knobHudName = document.getElementById('knob-hud-name');
+            var _knobHudFill = document.getElementById('knob-hud-fill');
+            var _knobHudValue = document.getElementById('knob-hud-value');
+
+            function showKnobHud(paramName, midiValue, displayValue, unit) {
+                var pct = (midiValue / 127) * 100;
+                _knobHudName.textContent = paramName;
+                _knobHudFill.style.width = pct + '%';
+                _knobHudValue.textContent = displayValue + (unit ? ' ' + unit : '');
+                _knobHudEl.classList.add('visible');
+                if (_knobHudTimer) clearTimeout(_knobHudTimer);
+                _knobHudTimer = setTimeout(function() {
+                    _knobHudEl.classList.remove('visible');
+                }, 1500);
+            }
+
             function executeCloseCommand() {
                 addConsoleOutput('Clearing all structures');
                 if (window.viewer) {
@@ -585,6 +647,62 @@
                         // Handle clip/fog control events
                         if (ev.type === 'clipfog') {
                             var v = ev.value; // 0-127 MIDI range
+                            // Knob display config: [displayName, min, max, decimals, unit, isBoolean]
+                            var _knobMeta = {
+                                clipRadius: ['Clip Radius', 1, 200, 1, ''],
+                                minNear: ['Min Near', 0.1, 50, 1, ''],
+                                fog: ['Fog', 0, 100, 1, '%'],
+                                exposure: ['Exposure', 0, 3, 2, ''],
+                                ambient: ['Ambient', 0, 2, 2, ''],
+                                lightIntensity: ['Light', 0, 5, 2, ''],
+                                fov: ['FOV', 10, 130, 0, '\u00b0'],
+                                sceneRadius: ['Scene Radius', 1, 10, 1, 'x'],
+                                lightInclination: ['Light Incl.', 0, 180, 0, '\u00b0'],
+                                lightAzimuth: ['Light Azim.', 0, 360, 0, '\u00b0'],
+                                interiorDarkening: ['Int. Darken', 0, 1, 2, ''],
+                                celSteps: ['Cel Steps', 2, 16, 0, ''],
+                                xrayEdge: ['X-Ray Edge', 0, 3, 2, ''],
+                                rotateSpeed: ['Rotate Spd', 1, 10, 0, ''],
+                                zoomSpeed: ['Zoom Spd', 1, 15, 0, ''],
+                                panSpeed: ['Pan Spd', 0.1, 5, 1, ''],
+                                edgeScale: ['Edge Scale', 1, 3, 0, ''],
+                                ghostEdge: ['Ghost Edge', 0, 1, 2, ''],
+                                highlightStrength: ['Highlight', 0, 1, 2, ''],
+                                selectStrength: ['Select', 0, 1, 2, ''],
+                                dimStrength: ['Dim', 0, 1, 2, ''],
+                                resetDuration: ['Reset Dur.', 0, 1000, 0, 'ms'],
+                                innerEdge: ['Inner Edge', 0, 3, 2, ''],
+                                dpoit: ['Depth Peel', 1, 10, 0, ''],
+                                pickPadding: ['Pick Pad', 0, 10, 0, 'px'],
+                                highlightEdgeStrength: ['Hi Edge', 0, 1, 2, ''],
+                                multisampleLevel: ['Multisample', 0, 5, 0, ''],
+                                interactionFps: ['Interact FPS', 10, 60, 0, ''],
+                                moveSpeed: ['Move Spd', 0.1, 3, 1, ''],
+                                boostFactor: ['Boost', 0.1, 10, 1, 'x'],
+                                giEnable: ['GI', 0, 1, 0, '', true],
+                                giBounces: ['GI Bounces', 1, 32, 0, ''],
+                                giShadowEnable: ['GI Shadows', 0, 1, 0, '', true],
+                                giTargetFps: ['GI Target FPS', 0, 120, 0, ''],
+                                light2Inclination: ['Light2 Incl.', 0, 180, 0, '\u00b0'],
+                                light2Azimuth: ['Light2 Azim.', 0, 360, 0, '\u00b0'],
+                                light2Intensity: ['Light2', 0, 5, 2, ''],
+                                pickingAlpha: ['Pick Alpha', 0, 1, 2, ''],
+                                metalness: ['Metalness', 0, 1, 2, ''],
+                                roughness: ['Roughness', 0, 1, 2, ''],
+                                bumpiness: ['Bumpiness', 0, 1, 2, ''],
+                                selectEdgeStrength: ['Sel Edge', 0, 1, 2, ''],
+                                transparentBg: ['Transp. BG', 0, 1, 0, '', true],
+                                interiorColorFlag: ['Int. Color', 0, 1, 0, '', true],
+                                colorMarker: ['Color Marker', 0, 1, 0, '', true],
+                                markingEnabled: ['Marking', 0, 1, 0, '', true],
+                                flyMode: ['Fly Mode', 0, 1, 0, '', true],
+                                hizEnabled: ['HiZ', 0, 1, 0, '', true],
+                                hizFrameLag: ['HiZ Lag', 1, 30, 0, ''],
+                                debugSceneBounds: ['Dbg Scene', 0, 1, 0, '', true],
+                                debugObjBounds: ['Dbg Obj', 0, 1, 0, '', true],
+                                userInteractionMs: ['Interact Ms', 0, 1000, 0, 'ms'],
+                                debugVisibleBounds: ['Dbg Visible', 0, 1, 0, '', true]
+                            };
                             if (ev.param === 'clipRadius') {
                                 // Map 0-127 to radius 1-200
                                 canvas3d.setProps({ cameraClipping: { radius: 1 + (v / 127) * 199 } });
@@ -789,6 +907,17 @@
                             } else if (ev.param === 'debugVisibleBounds') {
                                 // Boolean: 0-63 = off, 64-127 = on
                                 canvas3d.setProps({ debug: { visibleSceneBoundingSpheres: v >= 64 } });
+                            }
+                            // Show knob HUD feedback
+                            var meta = _knobMeta[ev.param];
+                            if (meta) {
+                                var isBoolean = meta[5];
+                                if (isBoolean) {
+                                    showKnobHud(meta[0], v, v >= 64 ? 'ON' : 'OFF', '');
+                                } else {
+                                    var dispVal = meta[1] + (v / 127) * (meta[2] - meta[1]);
+                                    showKnobHud(meta[0], v, dispVal.toFixed(meta[3]), meta[4]);
+                                }
                             }
                             return;
                         }
