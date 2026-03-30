@@ -1,0 +1,127 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+hr {
+    margin: 10px;
+}
+h1, h2, h3, h4, h5 {
+    margin-top: 5px;
+    margin-bottom: 3px;
+}
+button {
+    padding: 2px;
+}
+#app {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+#console {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 400px;
+    height: calc(8 * 1.5em + 40px);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5em;
+    display: none;
+    flex-direction: column;
+    z-index: 10000;
+}
+#console.visible {
+    display: flex;
+}
+#console.overlay {
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    font-size: 14px;
+}
+#console-output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+#console-output::-webkit-scrollbar {
+    width: 12px;
+}
+#console-output::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+#console-output::-webkit-scrollbar-thumb {
+    background: #2a2a2a;
+}
+#console-output::-webkit-scrollbar-thumb:hover {
+    background: #333333;
+}
+#console-input-line {
+    display: flex;
+    padding: 5px 10px;
+    border-top: 1px solid rgba(0, 255, 0, 0.3);
+}
+#console-prompt {
+    margin-right: 5px;
+}
+#console-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    outline: none;
+}
+/* Knob HUD badge */
+#knob-hud {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background-color: rgba(0, 0, 0, 0.75);
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 255, 0, 0.25);
+    z-index: 200000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    white-space: nowrap;
+}
+#knob-hud.visible {
+    opacity: 1;
+    transition: opacity 0.05s ease;
+}
+#knob-hud-bar {
+    display: inline-block;
+    width: 80px;
+    height: 8px;
+    background-color: rgba(0, 255, 0, 0.15);
+    border-radius: 2px;
+    vertical-align: middle;
+    margin: 0 8px;
+    overflow: hidden;
+}
+#knob-hud-fill {
+    height: 100%;
+    background-color: #00ff00;
+    border-radius: 2px;
+    transition: width 0.05s ease;
+}

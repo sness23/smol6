@@ -72,6 +72,21 @@ npm run dev
 | `public/smol/molstar.css` | Viewer styles |
 | `vite.config.ts` | Vite + Electron plugin configuration |
 
+### Important: Renderer is all inline
+
+All renderer logic (console UI, command execution, knob handling, spacemouse camera control) lives as inline `<script>` in `index.html`. There are no separate `.ts` or `.js` source files for the renderer — edit `index.html` directly.
+
+### IPC Channels
+
+| Channel | Direction | Purpose |
+|---------|-----------|---------|
+| `get-settings` | renderer → main (invoke) | Fetch `~/.smol` settings |
+| `load-file` | main → renderer | Load molecular file from CLI args |
+| `execute-command` | main → renderer | Execute console command from HTTP API |
+| `command-result` | renderer → main (send) | Return command execution result |
+| `spacemouse-event` | main → renderer | Forward WebSocket hardware events |
+| `main-process-message` | main → renderer | Startup timestamp |
+
 ### Build Output
 
 - `dist/` - Compiled renderer (HTML + public assets)
@@ -101,6 +116,28 @@ npm run dev
 | `console toggle` | Toggle console visibility |
 | `preset default` | Reset all canvas3d parameters and camera to startup defaults |
 | `help` | Show available commands |
+
+## Command-Line File Loading
+
+```bash
+# Open a local molecular file directly
+smol6 myprotein.pdb
+smol6 /path/to/structure.cif
+```
+
+Supported formats: `.pdb`, `.sdf`, `.mol`, `.mol2`, `.cif`/`.mmcif`, `.xyz`, `.gro`. The main process resolves the path and sends it to the renderer via IPC `load-file` after window loads.
+
+## Remote Command Server (HTTP)
+
+The main process starts an HTTP server on `127.0.0.1:8888` for scripting/automation:
+
+```bash
+# Execute any console command remotely
+curl -X POST http://127.0.0.1:8888/command -d "load 1cbs"
+curl -X POST http://127.0.0.1:8888/command -d "color red"
+```
+
+Returns the command result as plain text. Times out after 5 seconds.
 
 ## Settings File (`~/.smol`)
 
