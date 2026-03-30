@@ -99,6 +99,7 @@ npm run dev
 | `console hide` | Hide console |
 | `console show` | Show console |
 | `console toggle` | Toggle console visibility |
+| `preset default` | Reset all canvas3d parameters and camera to startup defaults |
 | `help` | Show available commands |
 
 ## Settings File (`~/.smol`)
@@ -127,6 +128,39 @@ When in overlay mode (`console overlay`), the console covers the entire window w
 - The **MIDI knobs** control clip/fog/other parameters
 
 Use `console compact` or restart with `"consoleMode": "compact"` to return to the small console.
+
+## Hardware Control (zknobs / SpaceMouse)
+
+smol6 accepts real-time hardware input via a WebSocket server on port 8889:
+
+```
+Midi Fighter Twister (USB MIDI) → zknobs.py → WebSocket ws://127.0.0.1:8889
+    → electron/main.ts (forwards as IPC 'spacemouse-event')
+    → index.html renderer (parses JSON, calls canvas3d.setProps())
+```
+
+### Two Event Types
+
+- **`clipfog`** (absolute): `{"type": "clipfog", "param": "exposure", "value": 64}` — raw MIDI 0-127, mapped to parameter range in index.html
+- **`motion`** (delta): `{"type": "motion", "x": 0, "y": 0, "z": 500, "rx": 0, "ry": 0, "rz": 0}` — relative camera rotation/translation from spacemouse or knobs
+
+### Adding a New Knob Parameter
+
+1. **zknobs.py** (`~/github/sness23/zknobs/zknobs.py`): Add CC constant and `absolute_knobs` dict entry
+2. **index.html**: Add `else if (ev.param === 'newParam')` handler in the clipfog block (~line 700+)
+3. **index.html**: Add entry to `_knobMeta` table for HUD display: `newParam: ['Display Name', min, max, decimals, 'unit']`
+
+### Knob HUD Badge
+
+A floating overlay (top-right, `#knob-hud`) shows parameter name, progress bar, and mapped value when any knob is turned. Auto-fades after 1.5s. Uses `z-index: 200000` to stay above Mol*'s UI layers (which go up to `100000`).
+
+### Console Commands Handled Locally
+
+Some commands are intercepted in index.html before reaching molstar's ConsoleManager:
+- `console overlay` / `console compact` — handled locally for CSS mode switching
+- `preset default` — resets all canvas3d props to captured startup defaults
+
+All other commands (including 900+ ChimeraX commands) pass through to `window.viewer.plugin.console.execute()`.
 
 ## Notes
 
