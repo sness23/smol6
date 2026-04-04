@@ -1,0 +1,54 @@
+# CASP15 H1171 — The Repair Crew Assembles (7PBL)
+---
+
+We've seen RuvB, the hexameric motor.
+
+Now meet the full repair crew — RuvB bound
+to a domain of RuvA, its partner protein
+that recognizes damaged DNA.
+
+Published in Nature in 2022.
+
+> close
+> load 7pbl
+---
+
+RuvA is the targeting system. It recognizes
+Holliday junctions — the four-way DNA
+crossover structures that form during
+genetic recombination.
+
+RuvA binds the junction and then recruits
+RuvB to do the mechanical work.
+
+> spin 0.15
+---
+
+The ATP molecules are still here, powering
+the complex.
+
+But now we can see how RuvA's domain
+docks onto the RuvB ring, creating a
+functional machine that can both find
+and fix damaged DNA.
+
+> stop
+> view ligand
+---
+
+This assembly represents a prediction challenge
+beyond simple docking — it's protein-protein
+interaction combined with ligand binding.
+
+CASP15 tested whether methods could predict
+not just where the ligand goes, but how
+the whole complex comes together.
+
+> reset
+> spin 0.1
+---
+
+The RuvB-RuvA complex — DNA repair in action.
+PDB code 7PBL, CASP15 target H1171.
+
+> stop

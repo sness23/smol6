@@ -1,0 +1,55 @@
+# CASP15 T1152 — The Cell Wall Sensor (7R1L)
+---
+
+How do organisms detect bacteria?
+One answer is by sensing their cell walls.
+
+This is a LysM domain from Clostridium thermocellum —
+a tiny protein module that recognizes the building
+blocks of bacterial cell walls.
+
+> close
+> load 7r1l
+---
+
+At just 56 residues, this is one of the smallest
+CASP15 targets. But don't let the size fool you.
+
+LysM domains are found across all kingdoms of life —
+in bacteria, fungi, plants, and animals —
+and they all do the same thing:
+bind chitin and peptidoglycan.
+
+> spin 0.15
+---
+
+This structure shows the LysM domain
+bound to its carbohydrate target.
+
+The cooperative binding is key — multiple LysM
+domains work together to grip the long sugar
+chains in bacterial cell walls, creating
+a much stronger interaction than any
+single domain could achieve.
+
+> stop
+> view ligand
+---
+
+In plants, LysM domains are the first line
+of immune defense — they detect bacterial
+cell wall fragments and trigger
+immune responses.
+
+In biotechnology, they're used to break
+down biomass for biofuel production.
+
+> reset
+> spin 0.1
+---
+
+The LysM domain — small but mighty,
+nature's universal cell wall detector.
+PDB code 7R1L, CASP15 target T1152.
+
+> stop

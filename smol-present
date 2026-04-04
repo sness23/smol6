@@ -1,0 +1,196 @@
+#!/bin/bash
+# smol-present - Interactive slideshow presenter for smol6
+#
+# Displays narration text in terminal, sends commands to smol6 on Enter.
+# Designed for live recording with OBS - you read the narration, press Enter
+# to advance, and smol6 does the camera work.
+#
+# Usage: smol-present <show.show>
+#
+# Show format (.show files):
+#   --- (slide separator)
+#   Narration text for you to read aloud.
+#   Multiple lines are fine.
+#   > command sent to smol6
+#   > another command
+#   --- (next slide)
+
+SMOL_PORT="${SMOL_PORT:-8888}"
+SMOL_HOST="${SMOL_HOST:-127.0.0.1}"
+
+BOLD='\033[1m'
+DIM='\033[2m'
+CYAN='\033[36m'
+YELLOW='\033[33m'
+GREEN='\033[32m'
+MAGENTA='\033[35m'
+RESET='\033[0m'
+
+if [ $# -eq 0 ]; then
+    echo "Usage: smol-present <show.show>"
+    echo ""
+    echo "Interactive slideshow presenter for smol6."
+    echo "Press Enter to advance slides. Narration is shown in terminal."
+    echo "Commands after '>' are sent to smol6 via HTTP."
+    exit 1
+fi
+
+SHOW="$1"
+
+if [ ! -f "$SHOW" ]; then
+    echo "Error: Show file not found: $SHOW"
+    exit 1
+fi
+
+send_cmd() {
+    local cmd="$1"
+    local result
+    result=$(curl -s -m 5 -X POST "http://${SMOL_HOST}:${SMOL_PORT}/command" -d "$cmd" 2>/dev/null)
+    if [ $? -ne 0 ]; then
+        echo -e "  ${DIM}(smol6 not responding)${RESET}"
+    fi
+}
+
+# Parse the show file into slides
+# Each slide is separated by ---
+# Lines starting with > are commands
+# Lines starting with # at the top are metadata (title)
+# Everything else is narration
+
+declare -a SLIDE_NARRATION
+declare -a SLIDE_COMMANDS
+current_narration=""
+current_commands=""
+slide_count=0
+show_title=""
+
+while IFS= read -r line || [ -n "$line" ]; do
+    # First line starting with # before any --- is the title
+    if [ $slide_count -eq 0 ] && [[ "$line" =~ ^#\  ]] && [ -z "$show_title" ]; then
+        show_title="${line#\# }"
+        continue
+    fi
+
+    # Slide separator
+    if [[ "$line" == "---" ]]; then
+        if [ -n "$current_narration" ] || [ -n "$current_commands" ]; then
+            SLIDE_NARRATION[$slide_count]="$current_narration"
+            SLIDE_COMMANDS[$slide_count]="$current_commands"
+            ((slide_count++))
+        fi
+        current_narration=""
+        current_commands=""
+        continue
+    fi
+
+    # Skip empty lines at start of slide
+    if [ -z "$current_narration" ] && [ -z "$current_commands" ] && [ -z "$line" ]; then
+        continue
+    fi
+
+    # Command line
+    if [[ "$line" =~ ^'>'[[:space:]]*(.*) ]]; then
+        current_commands+="${BASH_REMATCH[1]}"$'\n'
+        continue
+    fi
+
+    # Skip comment lines
+    [[ "$line" =~ ^[[:space:]]*## ]] && continue
+
+    # Narration line
+    current_narration+="$line"$'\n'
+
+done < "$SHOW"
+
+# Don't forget the last slide
+if [ -n "$current_narration" ] || [ -n "$current_commands" ]; then
+    SLIDE_NARRATION[$slide_count]="$current_narration"
+    SLIDE_COMMANDS[$slide_count]="$current_commands"
+    ((slide_count++))
+fi
+
+if [ $slide_count -eq 0 ]; then
+    echo "Error: No slides found in $SHOW"
+    exit 1
+fi
+
+# --- Presentation ---
+
+clear
+echo -e "${MAGENTA}${BOLD}╔══════════════════════════════════════════════════════════════╗${RESET}"
+echo -e "${MAGENTA}${BOLD}║  smol-present                                               ║${RESET}"
+echo -e "${MAGENTA}${BOLD}╚══════════════════════════════════════════════════════════════╝${RESET}"
+echo ""
+if [ -n "$show_title" ]; then
+    echo -e "${BOLD}${CYAN}  $show_title${RESET}"
+    echo ""
+fi
+echo -e "${DIM}  $slide_count slides  •  Press Enter to start  •  q to quit${RESET}"
+echo ""
+read -r -s -p ""
+
+for ((i=0; i<slide_count; i++)); do
+    clear
+
+    # Header
+    echo -e "${DIM}─── slide $((i+1))/$slide_count ───${RESET}"
+    echo ""
+
+    # Show narration
+    narration="${SLIDE_NARRATION[$i]}"
+    if [ -n "$narration" ]; then
+        # Print narration with nice formatting
+        while IFS= read -r nline; do
+            if [ -z "$nline" ]; then
+                echo ""
+            else
+                echo -e "  ${BOLD}$nline${RESET}"
+            fi
+        done <<< "$narration"
+    fi
+
+    # Send commands
+    commands="${SLIDE_COMMANDS[$i]}"
+    if [ -n "$commands" ]; then
+        echo ""
+        while IFS= read -r cmd; do
+            [ -z "$cmd" ] && continue
+
+            # Handle @delay directives
+            if [[ "$cmd" =~ ^@([0-9]*\.?[0-9]*)$ ]]; then
+                delay="${BASH_REMATCH[1]}"
+                [ -z "$delay" ] && delay="0.5"
+                sleep "$delay"
+                continue
+            fi
+
+            echo -e "  ${DIM}> $cmd${RESET}"
+            send_cmd "$cmd"
+        done <<< "$commands"
+    fi
+
+    # Wait for Enter (or q to quit)
+    echo ""
+    if [ $i -lt $((slide_count - 1)) ]; then
+        echo -e "${DIM}  [Enter → next slide]${RESET}"
+    else
+        echo -e "${DIM}  [Enter → end]${RESET}"
+    fi
+
+    while true; do
+        read -r -s -n 1 key
+        if [ "$key" = "q" ] || [ "$key" = "Q" ]; then
+            echo ""
+            echo -e "${DIM}Stopped.${RESET}"
+            exit 0
+        fi
+        # Enter key (empty read)
+        if [ -z "$key" ]; then
+            break
+        fi
+    done
+done
+
+clear
+echo -e "${GREEN}${BOLD}  ✓ Show complete${RESET}"
+echo ""

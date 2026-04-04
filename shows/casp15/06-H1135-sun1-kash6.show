@@ -1,0 +1,57 @@
+# CASP15 H1135 — The Nuclear Bridge (7Z8Y)
+---
+
+Every cell in your body has a nucleus,
+and that nucleus needs to be physically
+connected to the rest of the cell.
+
+This is the SUN1-KASH6 complex — a molecular
+bridge that spans the nuclear envelope.
+
+Published in Communications Biology in 2024.
+
+> close
+> load 7z8y
+---
+
+This complex is part of the LINC system —
+Linker of Nucleoskeleton and Cytoskeleton.
+
+It literally connects the DNA-organizing scaffold
+inside the nucleus to the structural framework
+outside it. Without this bridge, cells can't
+properly position their nuclei.
+
+> spin 0.15
+---
+
+What's remarkable about this structure is its
+asymmetry. Most people assumed LINC complexes
+were symmetric, but this crystal structure
+revealed an unexpected asymmetric architecture.
+
+That asymmetry matters — it explains how the
+complex inserts into the double membrane
+of the nuclear envelope.
+
+> stop
+> view ligand
+---
+
+Mutations in LINC complex proteins cause
+devastating diseases — muscular dystrophy,
+cardiomyopathy, and premature aging syndromes
+like progeria.
+
+Understanding this bridge at atomic resolution
+is a step toward treating these diseases.
+
+> reset
+> spin 0.1
+---
+
+The SUN1-KASH6 complex — the bridge that holds
+your nucleus in place.
+PDB code 7Z8Y, CASP15 target H1135.
+
+> stop

@@ -1,0 +1,52 @@
+# CASP15 T1158v4 — The Engine Room (8SWN)
+---
+
+Every pump needs fuel.
+
+This is MRP4 bound to ATP — adenosine triphosphate —
+the universal energy currency of life.
+
+This structure shows the engine that powers
+the prostaglandin pump.
+
+> close
+> load 8swn
+---
+
+ABC transporters like MRP4 have two nucleotide-
+binding domains that sandwich ATP between them.
+
+When ATP is hydrolyzed, the energy released
+drives a conformational change that pushes
+the cargo through the membrane.
+
+> spin 0.15
+---
+
+Here's the ATP binding site — the engine room
+of this molecular machine.
+
+This is a fundamentally different prediction
+challenge from the prostaglandin binding sites.
+ATP binds in a conserved pocket shared
+across thousands of proteins.
+
+> stop
+> view ligand
+---
+
+Four structures of the same protein,
+four completely different ligands,
+four different prediction challenges.
+
+This is what made the MRP4 targets
+such a comprehensive test of docking methods.
+
+> reset
+> spin 0.1
+---
+
+MRP4 with ATP — fuel for the pump.
+PDB code 8SWN, CASP15 target T1158v4.
+
+> stop

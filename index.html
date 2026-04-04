@@ -407,6 +407,12 @@
                     navigateHistory('down');
                 } else if (e.key === 'Enter') {
                     var command = consoleInput.value.trim();
+                    // During presentation, Enter (or q) controls the slideshow
+                    if (_presentationActive) {
+                        consoleInput.value = '';
+                        handlePresentationInput(command);
+                        return;
+                    }
                     if (command) {
                         addConsoleOutput('smol> ' + command);
                         addToHistory(command);
@@ -417,6 +423,175 @@
                     }
                 }
             });
+
+            // --- Presentation engine ---
+            var _presentationActive = false;
+            var _presentationSlides = [];
+            var _presentationIndex = 0;
+            var _presentationCb = null;
+
+            function parseShowContent(content) {
+                var slides = [];
+                var sections = content.split(/^---$/m);
+                var title = '';
+
+                for (var i = 0; i < sections.length; i++) {
+                    var section = sections[i].trim();
+                    if (!section) continue;
+
+                    var narration = [];
+                    var commands = [];
+
+                    var lines = section.split('\n');
+                    for (var j = 0; j < lines.length; j++) {
+                        var line = lines[j];
+                        // Title line (# at top before first slide)
+                        if (slides.length === 0 && narration.length === 0 && commands.length === 0 && line.match(/^#\s/)) {
+                            title = line.replace(/^#\s+/, '');
+                            continue;
+                        }
+                        // Skip ## comment lines
+                        if (line.match(/^\s*##/)) continue;
+                        // Command line
+                        if (line.match(/^>\s*/)) {
+                            commands.push(line.replace(/^>\s*/, ''));
+                            continue;
+                        }
+                        // Narration
+                        narration.push(line);
+                    }
+
+                    var narrationText = narration.join('\n').trim();
+                    if (narrationText || commands.length > 0) {
+                        slides.push({ narration: narrationText, commands: commands });
+                    }
+                }
+                return { title: title, slides: slides };
+            }
+
+            function startPresentation(showPath, cb) {
+                window.ipcRenderer.invoke('read-show-file', showPath).then(function(result) {
+                    if (result.error) {
+                        addConsoleOutput('Error: ' + result.error);
+                        cb(result.error);
+                        return;
+                    }
+                    var show = parseShowContent(result.content);
+                    if (show.slides.length === 0) {
+                        addConsoleOutput('Error: No slides found in ' + showPath);
+                        cb('No slides');
+                        return;
+                    }
+
+                    _presentationSlides = show.slides;
+                    _presentationIndex = 0;
+                    _presentationActive = true;
+                    _presentationCb = cb;
+
+                    addConsoleOutput('');
+                    addConsoleOutput('━━━ PRESENT: ' + (show.title || showPath) + ' ━━━');
+                    addConsoleOutput(show.slides.length + ' slides  •  Enter = next  •  q = quit');
+                    addConsoleOutput('');
+
+                    showPresentationSlide();
+                });
+            }
+
+            function showPresentationSlide() {
+                if (_presentationIndex >= _presentationSlides.length) {
+                    endPresentation('Show complete.');
+                    return;
+                }
+
+                var slide = _presentationSlides[_presentationIndex];
+                var slideNum = _presentationIndex + 1;
+                var total = _presentationSlides.length;
+
+                addConsoleOutput('── slide ' + slideNum + '/' + total + ' ──');
+
+                // Show narration
+                if (slide.narration) {
+                    addConsoleOutput('');
+                    var lines = slide.narration.split('\n');
+                    for (var i = 0; i < lines.length; i++) {
+                        addConsoleOutput('  ' + lines[i]);
+                    }
+                    addConsoleOutput('');
+                }
+
+                // Execute commands sequentially with delay support
+                executePresentationCommands(slide.commands, 0, function() {
+                    if (_presentationIndex < _presentationSlides.length - 1) {
+                        addConsoleOutput('  [Enter → next slide]');
+                    } else {
+                        addConsoleOutput('  [Enter → end]');
+                    }
+                    // Scroll console to bottom
+                    var consoleOutput = document.getElementById('console-output');
+                    if (consoleOutput) consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                });
+            }
+
+            function executePresentationCommands(commands, index, done) {
+                if (!_presentationActive || index >= commands.length) {
+                    done();
+                    return;
+                }
+
+                var cmd = commands[index].trim();
+                if (!cmd) {
+                    executePresentationCommands(commands, index + 1, done);
+                    return;
+                }
+
+                // Handle @delay directives
+                var delayMatch = cmd.match(/^@([0-9]*\.?[0-9]*)$/);
+                if (delayMatch) {
+                    var delay = parseFloat(delayMatch[1]) || 0.5;
+                    setTimeout(function() {
+                        executePresentationCommands(commands, index + 1, done);
+                    }, delay * 1000);
+                    return;
+                }
+
+                // Execute as a regular command (but don't recurse into present)
+                addConsoleOutput('  > ' + cmd);
+                if (window.viewer && window.viewer.plugin && window.viewer.plugin.console) {
+                    window.viewer.plugin.console.execute(cmd).then(function() {
+                        executePresentationCommands(commands, index + 1, done);
+                    }).catch(function() {
+                        executePresentationCommands(commands, index + 1, done);
+                    });
+                } else {
+                    // Fallback: send via HTTP to self (shouldn't normally happen)
+                    executePresentationCommands(commands, index + 1, done);
+                }
+            }
+
+            function endPresentation(msg) {
+                _presentationActive = false;
+                _presentationSlides = [];
+                _presentationIndex = 0;
+                addConsoleOutput('');
+                addConsoleOutput('━━━ ' + msg + ' ━━━');
+                addConsoleOutput('');
+                if (_presentationCb) _presentationCb(msg);
+                _presentationCb = null;
+            }
+
+            function handlePresentationInput(command) {
+                if (!_presentationActive) return false;
+
+                var cmd = command.trim().toLowerCase();
+                if (cmd === 'q' || cmd === 'quit' || cmd === 'exit') {
+                    endPresentation('Stopped.');
+                    return true;
+                }
+                // Any input (including empty Enter) advances to next slide
+                _presentationIndex++;
+                showPresentationSlide();
+                return true;
+            }
 
             function executeCommand(command, onResult) {
                 var cb = onResult || function() {};
@@ -437,6 +612,19 @@
                         var msg = 'Error: Viewer not ready or defaults not captured';
                         addConsoleOutput(msg);
                         cb(msg);
+                    }
+                    return;
+                }
+
+                // Handle "present" command — run a .show slideshow
+                if (cmdParts[0].toLowerCase() === 'present') {
+                    if (cmdParts.length < 2) {
+                        var msg = 'Usage: present <file.show>\n  present casp15/01-H1114-hydrogenase\n  present /absolute/path/to/file.show\n\nPress Enter to advance slides, q to quit.';
+                        addConsoleOutput(msg);
+                        cb(msg);
+                    } else {
+                        var showPath = cmdParts.slice(1).join(' ');
+                        startPresentation(showPath, cb);
                     }
                     return;
                 }
@@ -535,6 +723,21 @@
             }
 
             function executeHelpCommand(commandName) {
+                if (commandName === 'present') {
+                    addConsoleOutput('present <file> — Run an interactive slideshow\n' +
+                        '\n' +
+                        'Usage:\n' +
+                        '  present casp15/01-H1114-hydrogenase\n' +
+                        '  present /absolute/path/to/show.show\n' +
+                        '\n' +
+                        'Loads a .show file and enters presentation mode.\n' +
+                        'Narration is displayed in the console.\n' +
+                        'Commands are sent to the viewer automatically.\n' +
+                        'Press Enter to advance slides, q to quit.\n' +
+                        '\n' +
+                        'Relative paths resolve from the shows/ directory.');
+                    return;
+                }
                 var result = molstar.executeHelp(window.viewer ? window.viewer.plugin : null, commandName);
                 if (result.success && result.helpText) {
                     addConsoleOutput(result.helpText);

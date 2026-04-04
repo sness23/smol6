@@ -100,6 +100,7 @@ npm run dev
 | `console show` | Show console |
 | `console toggle` | Toggle console visibility |
 | `preset default` | Reset all canvas3d parameters and camera to startup defaults |
+| `present <file>` | Run interactive slideshow (Enter to advance, q to quit) |
 | `help` | Show available commands |
 
 ## Settings File (`~/.smol`)
@@ -162,9 +163,101 @@ Some commands are intercepted in index.html before reaching molstar's ConsoleMan
 
 All other commands (including 900+ ChimeraX commands) pass through to `window.viewer.plugin.console.execute()`.
 
+## HTTP Command Server (port 8888)
+
+The main process runs an HTTP server on `127.0.0.1:8888` for external scripting:
+
+```bash
+# Send any console command from the terminal
+curl -X POST http://127.0.0.1:8888/command -d "load 1cbs"
+curl -X POST http://127.0.0.1:8888/command -d "color red"
+```
+
+Returns the command result as plain text (5s timeout). This enables scripting smol6 from external tools, shell scripts, or other applications.
+
+## File Loading from Command Line
+
+```bash
+# Open a local structure file directly
+./smol6 /path/to/structure.pdb
+```
+
+The main process resolves the file path from `process.argv` and sends it to the renderer via `load-file` IPC channel after the window loads.
+
+## IPC Channels
+
+| Channel | Direction | Purpose |
+|---------|-----------|---------|
+| `get-settings` | renderer → main | Load `~/.smol` settings (invoke/handle) |
+| `spacemouse-event` | main → renderer | Forward WebSocket hardware events |
+| `execute-command` | main → renderer | Forward HTTP command server requests |
+| `command-result` | renderer → main | Return command execution result |
+| `load-file` | main → renderer | Send file path from CLI args |
+| `main-process-message` | main → renderer | Startup timestamp (unused by renderer) |
+
+## Presentation System (Video Production)
+
+Interactive slideshow system for creating molecular visualization videos.
+
+### In-Console Presenter
+
+```
+present casp15/01-H1114-hydrogenase    # relative to shows/ dir
+present /absolute/path/to/file.show    # absolute path
+```
+
+- Displays narration text in console, executes commands automatically
+- Press **Enter** to advance slides, **q** to quit
+- Designed for live recording with OBS (read narration aloud while presenting)
+
+### Terminal Presenter (`smol-present`)
+
+```bash
+./smol-present shows/casp15/01-H1114-hydrogenase.show
+```
+
+Same slideshow but narration displays in the terminal (larger text, better for teleprompter use). Commands sent to smol6 via HTTP port 8888.
+
+### Show File Format (`.show`)
+
+```
+# Title of the Show
+---
+Narration text displayed for you to read.
+Multiple lines are fine.
+
+> load 1cbs
+> @2
+> view ligand
+> spin 0.2
+---
+Next slide narration here.
+
+> stop
+> reset
+```
+
+- `---` separates slides
+- `> command` lines are sent to smol6
+- `> @N` waits N seconds between commands
+- `## comments` are skipped
+- `# Title` (before first `---`) is the show title
+- Everything else is narration text
+
+### Show Files
+
+Located in `shows/casp15/` — 15 pre-written shows for CASP15 ligand targets.
+
+### IPC Channels (Presentation)
+
+| Channel | Direction | Purpose |
+|---------|-----------|---------|
+| `read-show-file` | renderer → main | Read .show file from disk (invoke/handle) |
+
 ## Notes
 
 - React deps in package.json are for Vite plugin compatibility only (app doesn't use React)
 - Chunk size limit set to 10MB for molstar.js
 - D-Bus errors on Linux are harmless
 - Default zoom is 300% (configurable via `~/.smol`)
+- `bufferutil` and `utf-8-validate` are externalized in Vite config (optional native deps for `ws`)

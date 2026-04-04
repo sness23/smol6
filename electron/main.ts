@@ -244,6 +244,27 @@ app.whenReady().then(() => {
   // IPC handler for settings
   ipcMain.handle('get-settings', () => settings)
 
+  // IPC handler for reading show files
+  ipcMain.handle('read-show-file', (_event, filePath: string) => {
+    try {
+      const resolved = path.isAbsolute(filePath)
+        ? filePath
+        : path.resolve(process.env.APP_ROOT!, 'shows', filePath)
+      // Try exact path first, then with .show extension
+      let target = resolved
+      if (!fs.existsSync(target) && !target.endsWith('.show')) {
+        target = resolved + '.show'
+      }
+      if (!fs.existsSync(target)) {
+        return { error: `File not found: ${filePath}` }
+      }
+      const content = fs.readFileSync(target, 'utf-8')
+      return { content, path: target }
+    } catch (e: unknown) {
+      return { error: `Failed to read file: ${(e as Error).message}` }
+    }
+  })
+
   createWindow()
   startCommandServer()
   startSpacemouseServer()

@@ -1,0 +1,56 @@
+# CASP15 T1187 — The Sugar Reader (8AD2)
+---
+
+Plants can't run from danger.
+Instead, they have sophisticated defense systems
+that detect threats at the molecular level.
+
+This is Nictaba — a lectin from tobacco plants.
+
+Published in Glycobiology in 2024 by Bloch and colleagues.
+
+> close
+> load 8ad2
+---
+
+Nictaba is a sugar-binding protein — a lectin —
+that reads the sugar coatings on molecules
+and cells.
+
+It forms a dimer, and this crystal structure
+revealed a completely new mode of lectin
+dimerization that hadn't been seen before.
+
+> spin 0.15
+---
+
+The carbohydrate binding site is where
+Nictaba recognizes specific sugar patterns.
+
+Lectins like this are part of the plant's
+innate immune system — they detect
+foreign sugar signatures on pathogens
+and trigger defense responses.
+
+> stop
+> view ligand
+---
+
+Lectins are incredibly useful in biotechnology.
+They're used in blood typing, cancer research,
+and as tools to study the complex sugar
+coatings on cells.
+
+Understanding new ways that lectins bind
+sugars opens doors for designing better
+molecular recognition tools.
+
+> reset
+> spin 0.1
+---
+
+Nictaba — the tobacco plant's molecular
+sugar detector.
+PDB code 8AD2, CASP15 target T1187.
+
+> stop

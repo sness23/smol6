@@ -1,0 +1,52 @@
+# CASP15 T1124 — Expanding the Genetic Code (7UX8)
+---
+
+What if life could use more than 20 amino acids?
+
+This is MfnG, a tyrosine O-methyltransferase that's
+part of a pathway to create a 21st amino acid.
+
+Published in Protein Science in 2022 by Wu and colleagues.
+
+> close
+> load 7ux8
+---
+
+MfnG is a dimeric enzyme that methylates tyrosine,
+creating a modified amino acid called
+O-methyl-tyrosine.
+
+This is part of a biosynthetic pathway that
+expands the eukaryotic genetic code beyond
+the standard 20 amino acids.
+
+> spin 0.15
+---
+
+The active site binds SAM — S-adenosylmethionine —
+the universal methyl donor in biology.
+
+SAM donates a methyl group to tyrosine,
+and this simple chemical modification
+opens the door to entirely new protein chemistry.
+
+> stop
+> view ligand
+---
+
+Engineering organisms with expanded genetic codes
+is one of the frontiers of synthetic biology.
+
+This enzyme is a key piece of that puzzle,
+and predicting its structure was a challenge
+that CASP15 put to the world's best
+structure prediction methods.
+
+> reset
+> spin 0.1
+---
+
+MfnG — the enzyme that expands life's alphabet.
+PDB code 7UX8, CASP15 target T1124.
+
+> stop

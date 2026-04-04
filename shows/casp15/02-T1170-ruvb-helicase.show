@@ -1,0 +1,52 @@
+# CASP15 T1170 — The DNA Repair Machine (7PBR)
+---
+
+This is RuvB — a molecular motor that repairs
+damaged DNA.
+
+Published in Nature in 2022 by Wald and colleagues,
+this structure revealed how cells fix one of the
+most dangerous types of DNA damage.
+
+> close
+> load 7pbr
+---
+
+RuvB forms a hexameric ring — six copies of the
+same protein arranged in a circle.
+
+This ring wraps around DNA and uses the energy
+from ATP to drive branch migration of
+Holliday junctions — the crossover points
+that form when chromosomes recombine.
+
+> spin 0.15
+---
+
+Let's look at the fuel that powers this machine.
+
+Each subunit binds ATP or ADP, and the coordinated
+hydrolysis around the ring creates a rotary motor
+that physically pushes DNA through the complex.
+
+> stop
+> view ligand
+---
+
+Without RuvB, cells cannot properly repair
+double-strand breaks in DNA — the most lethal
+form of DNA damage.
+
+Understanding this machine helps us understand
+both cancer and the DNA repair pathways
+that protect us from it.
+
+> reset
+> spin 0.1
+---
+
+RuvB helicase — the molecular motor that
+saves your genome.
+PDB code 7PBR, CASP15 target T1170.
+
+> stop

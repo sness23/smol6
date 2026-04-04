@@ -1,0 +1,56 @@
+# CASP15 T1188 — The Chitin Destroyer (8C6Z)
+---
+
+Necrotic enteritis kills millions of chickens
+every year and costs the poultry industry
+billions of dollars.
+
+This is a chitinase from Clostridium perfringens —
+one of the key weapons this pathogen uses
+to attack.
+
+Published in PLoS Pathogens in 2024.
+
+> close
+> load 8c6z
+---
+
+Chitinases break down chitin — the tough
+structural material found in insect exoskeletons,
+fungal cell walls, and crustacean shells.
+
+But why does a gut bacterium need
+a chitin-destroying enzyme?
+
+> spin 0.15
+---
+
+The answer is that the mucus layer protecting
+the chicken's gut contains chitin-like structures.
+
+This chitinase helps Clostridium perfringens
+chew through that protective barrier,
+giving it access to the gut lining
+where it causes devastating tissue damage.
+
+> stop
+> view ligand
+---
+
+Understanding these chitinases is important
+because the poultry industry is under pressure
+to stop using antibiotics in animal feed.
+
+New treatments that target specific virulence
+factors like this enzyme could replace
+broad-spectrum antibiotics.
+
+> reset
+> spin 0.1
+---
+
+Clostridium perfringens chitinase — the enzyme
+that breaches the gut's defenses.
+PDB code 8C6Z, CASP15 target T1188.
+
+> stop

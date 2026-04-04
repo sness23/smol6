@@ -1,0 +1,53 @@
+# CASP15 T1158v2 — Same Pump, Different Cargo (8SXB)
+---
+
+Remember MRP4, the prostaglandin pump?
+
+This is the same transporter, but now caught
+with a different passenger — prostaglandin E2.
+
+PGE2 is the main mediator of pain and fever.
+When you take ibuprofen, you're blocking
+PGE2 production.
+
+> close
+> load 8sxb
+---
+
+The CASP15 organizers were clever here — they gave
+predictors four different ligands bound to the
+same protein.
+
+Each ligand binds slightly differently,
+and predicting those subtle differences
+was the real challenge.
+
+> spin 0.15
+---
+
+Here's PGE2 in the binding pocket.
+
+Compare this to PGE1 — the pocket reshapes
+slightly to accommodate each prostaglandin.
+This plasticity is what makes docking
+prediction so difficult.
+
+> stop
+> view ligand
+---
+
+This is why CASP matters — it forces the field
+to prove their methods work on real,
+unseen structures.
+
+No cherry-picking, no peeking at the answer.
+
+> reset
+> spin 0.1
+---
+
+MRP4 with prostaglandin E2 — the pain molecule
+in transit.
+PDB code 8SXB, CASP15 target T1158v2.
+
+> stop

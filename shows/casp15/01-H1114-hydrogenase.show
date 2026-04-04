@@ -1,0 +1,51 @@
+# CASP15 H1114 — The Enzyme That Eats Air (7UTD)
+---
+
+This is one of the most remarkable enzymes ever discovered.
+
+It's called Huc — a hydrogenase from Mycobacterium smegmatis
+that can extract energy from the trace amounts of hydrogen
+in ordinary air.
+
+Published in Nature in 2023 by Grinter and colleagues.
+
+> close
+> load 7utd
+---
+
+Look at this massive complex — over a thousand residues
+arranged in a huge oligomeric assembly.
+
+This is the machine that lets soil bacteria survive
+when there's nothing else to eat. They literally
+breathe hydrogen from the atmosphere.
+
+> spin 0.15
+---
+
+Now let's zoom into where the magic happens —
+the active site with its nickel-iron cofactor.
+
+This NiFe cluster is where hydrogen gas is split
+into protons and electrons, generating energy
+from a gas that makes up less than one part
+per million of our atmosphere.
+
+> stop
+> view ligand
+---
+
+The fact that CASP15 included this target shows
+how challenging protein structure prediction has become.
+
+With its complex oligomeric state and metal cofactors,
+this was one of the hardest targets in the competition.
+
+> reset
+> spin 0.1
+---
+
+Huc hydrogenase — the enzyme that eats thin air.
+PDB code 7UTD, CASP15 target H1114.
+
+> stop

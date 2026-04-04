@@ -1,0 +1,57 @@
+# CASP15 T1118 — Bacterial Iron Piracy (8B43)
+---
+
+Bacteria are constantly at war — with us,
+and with each other — over one critical resource: iron.
+
+This is FoxA, a TonB-dependent transporter from
+Pseudomonas aeruginosa.
+
+Published in PNAS in 2023 by Chan and colleagues.
+
+> close
+> load 8b43
+---
+
+FoxA sits in the outer membrane of Pseudomonas
+and acts like a gateway for siderophores —
+small molecules that bacteria secrete
+to steal iron from their environment.
+
+Iron is so scarce and so essential that
+bacteria have evolved elaborate piracy
+systems to capture it.
+
+> spin 0.15
+---
+
+Here's where siderophores and antibiotics bind.
+
+The remarkable thing about FoxA is that
+some antibiotics hijack this transporter —
+they disguise themselves as siderophores
+to sneak into the bacterial cell.
+
+It's a Trojan horse strategy for killing bacteria.
+
+> stop
+> view ligand
+---
+
+Pseudomonas aeruginosa is one of the most
+dangerous hospital-acquired infections,
+and it's increasingly antibiotic resistant.
+
+Understanding transporters like FoxA could lead
+to new antibiotics that exploit the bacteria's
+own iron-stealing machinery.
+
+> reset
+> spin 0.1
+---
+
+FoxA — the iron gate that antibiotics
+are learning to pick.
+PDB code 8B43, CASP15 target T1118.
+
+> stop

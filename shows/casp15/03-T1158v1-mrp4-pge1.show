@@ -1,0 +1,51 @@
+# CASP15 T1158 — The Prostaglandin Pump (8SX8)
+---
+
+This is MRP4 — a membrane transporter that pumps
+prostaglandins out of cells.
+
+Published in Nature Structural and Molecular Biology
+in 2024 by Pourmal and colleagues.
+
+> close
+> load 8sx8
+---
+
+MRP4 is an ABC transporter — one of those amazing
+molecular pumps that use ATP energy to move
+molecules across cell membranes.
+
+This one is special because it exports prostaglandins,
+the signaling molecules that control pain,
+inflammation, and fever.
+
+> spin 0.15
+---
+
+Here's the binding pocket with prostaglandin E1 —
+PGE1 — caught in the act of being transported.
+
+This was a CASP15 prediction target with four
+different ligands, making it one of the most
+challenging docking problems in the competition.
+
+> stop
+> view ligand
+---
+
+Understanding how MRP4 grabs and exports
+prostaglandins is crucial for drug design.
+
+Many painkillers and anti-inflammatory drugs
+work by blocking prostaglandin synthesis —
+but this transporter controls how much
+prostaglandin actually reaches its target.
+
+> reset
+> spin 0.1
+---
+
+MRP4 — the molecular pump behind pain signaling.
+PDB code 8SX8, CASP15 target T1158.
+
+> stop

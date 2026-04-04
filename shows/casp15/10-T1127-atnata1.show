@@ -1,0 +1,54 @@
+# CASP15 T1127 — The Plant's Chemical Weapon (8XBP)
+---
+
+Plants make an incredible arsenal of chemical
+weapons to defend themselves.
+
+This is AtNATA1 — an acetyltransferase from
+Arabidopsis thaliana, the model plant
+used in genetics research worldwide.
+
+> close
+> load 8xbp
+---
+
+AtNATA1 transfers an acetyl group from
+acetyl-CoA to its targets.
+
+This enzyme is part of the plant's defense
+system — it modifies small molecules
+to create compounds that are toxic
+to herbivores and pathogens.
+
+> spin 0.15
+---
+
+Here's the active site with acetyl-CoA bound —
+the universal acetyl donor in biology.
+
+The structure shows exactly how the enzyme
+positions this cofactor to transfer
+its acetyl group with precision.
+
+> stop
+> view ligand
+---
+
+Arabidopsis is to plant biology what
+E. coli is to microbiology — the organism
+we know best.
+
+Understanding enzymes like AtNATA1 helps us
+engineer crops with better natural defenses,
+potentially reducing the need for
+synthetic pesticides.
+
+> reset
+> spin 0.1
+---
+
+AtNATA1 — the plant's precision chemical
+warfare enzyme.
+PDB code 8XBP, CASP15 target T1127.
+
+> stop

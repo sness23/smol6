@@ -1,0 +1,53 @@
+# CASP15 T1158v3 — The Steroid Shuttle (8SX7)
+---
+
+MRP4 doesn't just pump prostaglandins.
+
+Here it is bound to DHEAS — dehydroepiandrosterone
+sulfate — a steroid hormone precursor.
+
+This shows that MRP4 is a promiscuous transporter
+with multiple roles in the body.
+
+> close
+> load 8sx7
+---
+
+DHEAS is the most abundant steroid hormone
+in the human body. It's a precursor to both
+testosterone and estrogen.
+
+The fact that MRP4 transports it means this
+pump plays a role in hormone signaling
+we're only beginning to understand.
+
+> spin 0.15
+---
+
+Look at how differently DHEAS sits in the
+binding pocket compared to the prostaglandins.
+
+It's a completely different shape — bulky steroid
+rings versus the long fatty acid chain of
+prostaglandins — yet MRP4 accommodates both.
+
+> stop
+> view ligand
+---
+
+This kind of substrate promiscuity is a nightmare
+for docking prediction. How do you predict
+where a molecule binds when the pocket
+can reshape to fit wildly different shapes?
+
+That's what makes CASP15 such a valuable
+benchmark.
+
+> reset
+> spin 0.1
+---
+
+MRP4 with DHEAS — one pump, many cargoes.
+PDB code 8SX7, CASP15 target T1158v3.
+
+> stop

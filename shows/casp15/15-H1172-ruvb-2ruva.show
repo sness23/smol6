@@ -1,0 +1,56 @@
+# CASP15 H1172 — The Full Machine (7PBP)
+---
+
+And now the complete assembly.
+
+This is RuvB with two copies of the RuvA domain —
+the full DNA repair machine captured
+in its working state.
+
+Also from the Nature 2022 paper by Wald
+and colleagues.
+
+> close
+> load 7pbp
+---
+
+With two RuvA domains bound, we can see
+the complete architecture of this
+molecular machine.
+
+The two RuvA domains sit on opposite faces
+of the RuvB hexamer, creating a channel
+through which DNA is threaded.
+
+> spin 0.15
+---
+
+The ATP molecules drive the whole assembly.
+
+As they're hydrolyzed one by one around
+the ring, the RuvB motor pulls DNA
+through at about 50 base pairs per second —
+fast enough to repair a Holliday junction
+before it causes problems.
+
+> stop
+> view ligand
+---
+
+From T1170 to H1171 to H1172, CASP15 presented
+this system in increasing complexity —
+first the motor alone, then with one partner,
+then the full machine.
+
+A brilliant way to test prediction methods
+at every level of biological organization.
+
+> reset
+> spin 0.1
+---
+
+The complete RuvAB machine — nature's
+DNA junction resolver.
+PDB code 7PBP, CASP15 target H1172.
+
+> stop
