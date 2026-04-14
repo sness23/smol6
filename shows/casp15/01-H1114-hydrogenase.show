@@ -9,6 +9,7 @@ in ordinary air.
 
 Published in Nature in 2023 by Grinter and colleagues.
 
+> console hide
 > close
 > load 7utd
 ---
@@ -32,7 +33,7 @@ from a gas that makes up less than one part
 per million of our atmosphere.
 
 > stop
-> view ligand
+> inspect ligand
 ---
 
 The fact that CASP15 included this target shows

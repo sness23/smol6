@@ -2,6 +2,7 @@
 
 ## Quick Reference
 - [Console Commands Reference](console-commands-reference.md) — All available console commands
+- [Auto-Generated Slideshows](auto-show-generation.md) — `smol-present --generate <pdbid>` pipeline
 - [Knob Mapping Plan](knob-mapping-plan.md) — Current MFT layout and future plans
 
 ## Clipping & Camera

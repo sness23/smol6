@@ -24,18 +24,116 @@ CYAN='\033[36m'
 YELLOW='\033[33m'
 GREEN='\033[32m'
 MAGENTA='\033[35m'
+RED='\033[31m'
 RESET='\033[0m'
 
+usage() {
+    cat <<EOF
+Usage: smol-present <show.show>
+       smol-present --generate <pdbid> [resname] [--play]
+
+Interactive slideshow presenter for smol6.
+
+PLAYBACK MODE:
+    smol-present <show.show>
+        Read a .show file, print narration, send commands to smol6 on
+        Enter. Press Enter to advance slides, q to quit.
+
+GENERATE MODE:
+    smol-present --generate <pdbid> [resname]
+        Fetch a PDB, analyze its protein-ligand interactions, ask
+        OpenAI for narration, and write a .show file under
+        shows/generated/<pdbid>.show. Stops after writing so you can
+        edit the narration.
+
+    smol-present --generate <pdbid> [resname] --play
+        Generate the .show file, then immediately enter playback mode.
+
+OPTIONS for --generate:
+    --model <name>     Override OpenAI model (default: o3)
+    --no-llm           Skip the LLM call; emit placeholder narration
+    --output <path>    Custom output path for the .show file
+
+ENV:
+    SMOL_HOST          smol6 HTTP host (default: 127.0.0.1)
+    SMOL_PORT          smol6 HTTP port (default: 8888)
+    OPENAI_API_KEY     required for --generate (unless --no-llm)
+EOF
+}
+
 if [ $# -eq 0 ]; then
-    echo "Usage: smol-present <show.show>"
-    echo ""
-    echo "Interactive slideshow presenter for smol6."
-    echo "Press Enter to advance slides. Narration is shown in terminal."
-    echo "Commands after '>' are sent to smol6 via HTTP."
+    usage
     exit 1
 fi
 
-SHOW="$1"
+# --- Argument parsing ---
+GENERATE_PDB=""
+GENERATE_RESNAME=""
+GENERATE_MODEL=""
+GENERATE_OUTPUT=""
+GENERATE_NO_LLM=0
+PLAY_AFTER_GEN=0
+SHOW=""
+
+if [ "$1" = "--generate" ]; then
+    shift
+    if [ $# -eq 0 ]; then
+        echo -e "${RED}Error: --generate requires a PDB id${RESET}"
+        usage
+        exit 1
+    fi
+    GENERATE_PDB="$1"
+    shift
+    # Optional positional resname (anything not starting with --)
+    if [ $# -gt 0 ] && [[ "$1" != --* ]]; then
+        GENERATE_RESNAME="$1"
+        shift
+    fi
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --play)     PLAY_AFTER_GEN=1; shift ;;
+            --no-llm)   GENERATE_NO_LLM=1; shift ;;
+            --model)    GENERATE_MODEL="$2"; shift 2 ;;
+            --output|-o) GENERATE_OUTPUT="$2"; shift 2 ;;
+            -h|--help)  usage; exit 0 ;;
+            *) echo -e "${RED}Unknown --generate option: $1${RESET}"; usage; exit 1 ;;
+        esac
+    done
+
+    # Locate the python generator (sibling of this script)
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    GEN_PY="$SCRIPT_DIR/scripts/smol-gen-show.py"
+    if [ ! -x "$GEN_PY" ] && [ ! -f "$GEN_PY" ]; then
+        echo -e "${RED}Error: generator not found at $GEN_PY${RESET}"
+        exit 1
+    fi
+
+    # Build python command
+    GEN_ARGS=("$GENERATE_PDB")
+    [ -n "$GENERATE_RESNAME" ] && GEN_ARGS+=("$GENERATE_RESNAME")
+    [ -n "$GENERATE_MODEL" ] && GEN_ARGS+=("--model" "$GENERATE_MODEL")
+    [ -n "$GENERATE_OUTPUT" ] && GEN_ARGS+=("--output" "$GENERATE_OUTPUT")
+    [ "$GENERATE_NO_LLM" = "1" ] && GEN_ARGS+=("--no-llm")
+
+    echo -e "${CYAN}Generating .show for ${GENERATE_PDB}...${RESET}"
+    OUT_PATH=$(python3 "$GEN_PY" "${GEN_ARGS[@]}")
+    GEN_RC=$?
+    if [ $GEN_RC -ne 0 ] || [ -z "$OUT_PATH" ]; then
+        echo -e "${RED}Generator failed (exit $GEN_RC).${RESET}"
+        exit 1
+    fi
+    echo -e "${GREEN}Wrote ${OUT_PATH}${RESET}"
+
+    if [ "$PLAY_AFTER_GEN" != "1" ]; then
+        echo -e "${DIM}Edit the narration if you like, then run:${RESET}"
+        echo -e "    smol-present \"$OUT_PATH\""
+        exit 0
+    fi
+
+    SHOW="$OUT_PATH"
+else
+    SHOW="$1"
+fi
 
 if [ ! -f "$SHOW" ]; then
     echo "Error: Show file not found: $SHOW"

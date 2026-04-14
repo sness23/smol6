@@ -1,0 +1,195 @@
+# CRYSTAL STRUCTURE OF CELLULAR RETINOIC-ACID-BINDING PROTEINS I AND II IN COMPLEX WITH ALL-TRANS-RETINOIC ACID AND A SYNTHETIC RETINOID — REA in 1CBS
+---
+
+1CBS: CRYSTAL STRUCTURE OF CELLULAR RETINOIC-ACID-BINDING PROTEINS I AND II IN COMPLEX WITH ALL-TRANS-RETINOIC ACID AND A SYNTHETIC RETINOID
+
+> console hide
+> close
+> load 1cbs
+> cartoon
+> color bychain
+
+---
+
+Overall fold (placeholder).
+
+> reset
+> spin 0.15
+
+---
+
+The ligand REA (placeholder).
+
+> stop
+> select ligand
+> style sel ball-and-stick
+> color sel yellow
+> focus sel
+
+---
+
+Binding pocket surface (placeholder).
+
+> surface
+> surface transparency 0.6
+> focus sel
+
+---
+
+All non-covalent interactions (placeholder).
+
+> hide surface
+> interactions
+> focus sel
+
+---
+
+PHE15 contacts the ligand (placeholder).
+
+> select /A:15
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:15
+
+---
+
+LEU19 contacts the ligand (placeholder).
+
+> select /A:19
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:19
+
+---
+
+ILE31 contacts the ligand (placeholder).
+
+> select /A:31
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:31
+
+---
+
+ALA32 contacts the ligand (placeholder).
+
+> select /A:32
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:32
+
+---
+
+ALA36 contacts the ligand (placeholder).
+
+> select /A:36
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:36
+
+---
+
+PRO39 contacts the ligand (placeholder).
+
+> select /A:39
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:39
+
+---
+
+THR54 contacts the ligand (placeholder).
+
+> select /A:54
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:54
+
+---
+
+THR56 contacts the ligand (placeholder).
+
+> select /A:56
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:56
+
+---
+
+VAL58 contacts the ligand (placeholder).
+
+> select /A:58
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:58
+
+---
+
+ARG59 contacts the ligand (placeholder).
+
+> select /A:59
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:59
+
+---
+
+VAL76 contacts the ligand (placeholder).
+
+> select /A:76
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:76
+
+---
+
+ASP77 contacts the ligand (placeholder).
+
+> select /A:77
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:77
+
+---
+
+ARG111 contacts the ligand (placeholder).
+
+> select /A:111
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:111
+
+---
+
+LEU121 contacts the ligand (placeholder).
+
+> select /A:121
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:121
+
+---
+
+ARG132 contacts the ligand (placeholder).
+
+> select /A:132
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:132
+
+---
+
+TYR134 contacts the ligand (placeholder).
+
+> select /A:134
+> style sel ball-and-stick
+> color sel cyan
+> focus /A:134
+
+---
+
+End of tour (placeholder).
+
+> stop
+> reset
+> spin 0.1
