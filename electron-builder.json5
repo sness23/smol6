@@ -11,6 +11,13 @@
     "dist",
     "dist-electron"
   ],
+  "extraResources": [
+    {
+      "from": "shows",
+      "to": "shows",
+      "filter": ["**/*"]
+    }
+  ],
   "mac": {
     "target": [
       "dmg"

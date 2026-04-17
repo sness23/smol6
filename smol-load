@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# smol-load - POST absolute path(s) to a running smol's HTTP command server.
+#
+# Resolves each argument to an absolute path before sending, so smol always
+# receives a fully-qualified path regardless of the caller's CWD. Pairs with
+# the upstream `load` command fix that accepts absolute paths / file:// URLs.
+#
+# Usage:
+#   smol-load <file>...
+# Examples:
+#   cd ~/chai-lab/out0
+#   smol-load pred.model_idx_0.cif
+#   smol-load pred.model_idx_{0..4}.cif       # brace expansion -> 5 loads
+#   SMOL_PORT=9999 smol-load foo.cif
+#
+# Env:
+#   SMOL_HOST  (default: 127.0.0.1)
+#   SMOL_PORT  (default: 8888)
+
+set -euo pipefail
+
+SMOL_HOST="${SMOL_HOST:-127.0.0.1}"
+SMOL_PORT="${SMOL_PORT:-8888}"
+URL="http://${SMOL_HOST}:${SMOL_PORT}/command"
+
+usage() {
+    cat <<EOF
+Usage: smol-load <file>...
+
+POSTs 'load <absolute-path>' to the smol HTTP command server for each file.
+
+Env:
+  SMOL_HOST  smol6 HTTP host (default: 127.0.0.1)
+  SMOL_PORT  smol6 HTTP port (default: 8888)
+EOF
+}
+
+if [[ $# -eq 0 ]]; then
+    usage >&2
+    exit 2
+fi
+
+# Resolve to an absolute path. Uses realpath when available (Linux, Homebrew
+# coreutils), otherwise falls back to a dirname/basename + pwd pair so the
+# script works on stock macOS bash.
+resolve_abs() {
+    local p="$1"
+    if command -v realpath >/dev/null 2>&1; then
+        realpath "$p"
+    else
+        local d b
+        d="$(dirname -- "$p")"
+        b="$(basename -- "$p")"
+        if [[ -d "$d" ]]; then
+            printf '%s/%s\n' "$(cd -- "$d" && pwd)" "$b"
+        else
+            return 1
+        fi
+    fi
+}
+
+for arg in "$@"; do
+    if [[ ! -e "$arg" ]]; then
+        echo "smol-load: not found: $arg" >&2
+        exit 1
+    fi
+
+    if ! abs="$(resolve_abs "$arg")"; then
+        echo "smol-load: cannot resolve path: $arg" >&2
+        exit 1
+    fi
+
+    if ! response="$(curl -sS -m 5 -X POST "$URL" --data-binary "load ${abs}" 2>&1)"; then
+        rc=$?
+        if [[ $rc -eq 7 ]]; then
+            echo "smol-load: cannot reach smol at $URL (is it running?)" >&2
+        else
+            echo "smol-load: curl failed ($rc): $response" >&2
+        fi
+        exit 1
+    fi
+
+    echo "$response"
+done

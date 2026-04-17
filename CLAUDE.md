@@ -27,11 +27,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ```bash
-npm run dev      # Start dev server with HMR
+npm run dev      # Start dev server with HMR (also launches Electron)
 npm run build    # Full production build (tsc → vite build → electron-builder)
-npm run lint     # ESLint for TypeScript
+npm run lint     # ESLint for TypeScript (--max-warnings 0)
 npm run preview  # Preview production build
 ```
+
+There is no test suite — `package.json` defines only `dev`, `build`, `lint`, and `preview`. Don't hunt for test commands. Active development happens on the `present` branch, not `main`.
+
+## Platforms
+
+Primary development is on Linux. The `electron-builder.json5` config has targets for macOS (DMG), Windows (NSIS x64), and Linux (AppImage). For VR support (Meta Quest 2 via Quest Link), a Windows build is required — Linux has no WebXR runtime. See `docs/vr-setup.md` for the VR story and `docs/windows-port.md` for the Windows porting checklist. Windows-specific helper scripts live in `scripts/*.cmd`; the bash scripts in the repo root are Linux/macOS (or Git Bash on Windows).
 
 ## Syncing with molstar0
 
@@ -71,6 +77,10 @@ npm run dev
 | `public/smol/molstar.js` | Pre-built Mol* smol viewer (~5MB, not bundled by Vite) |
 | `public/smol/molstar.css` | Viewer styles |
 | `vite.config.ts` | Vite + Electron plugin configuration |
+| `shows/` | Presentation `.show` files (casp15/, generated/) — see Presentation System below |
+| `smol-present` | Terminal-side presenter script (sends commands via HTTP 8888) |
+| `smol-cmd` | Send a single console command via HTTP 8888 |
+| `smol-load` | Load local file(s) by relative path — resolves to absolute path, then POSTs `load` |
 
 ### Build Output
 
@@ -101,6 +111,7 @@ npm run dev
 | `console toggle` | Toggle console visibility |
 | `preset default` | Reset all canvas3d parameters and camera to startup defaults |
 | `present <file>` | Run interactive slideshow (Enter to advance, q to quit) |
+| `restart` | Reload the renderer — fresh WebGL context, clears all structures. Main process and HTTP/WS servers untouched. |
 | `help` | Show available commands |
 
 ## Settings File (`~/.smol`)
@@ -174,6 +185,11 @@ curl -X POST http://127.0.0.1:8888/command -d "color red"
 ```
 
 Returns the command result as plain text (5s timeout). This enables scripting smol6 from external tools, shell scripts, or other applications.
+
+### Helper scripts
+
+- `smol-cmd <command>` — thin wrapper around the `curl` call above.
+- `smol-load <file>...` — resolves each arg to an absolute path (via `realpath` on Linux, dirname/pwd fallback on macOS) before POSTing `load <abs>`. Lets you type `smol-load pred.model_idx_0.cif` from any directory; shell brace-expansion (`smol-load pred.model_idx_{0..4}.cif`) loads multiple files. Both honor `SMOL_HOST` / `SMOL_PORT`.
 
 ## File Loading from Command Line
 

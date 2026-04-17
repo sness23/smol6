@@ -629,6 +629,18 @@
                     return;
                 }
 
+                // Handle "restart" — reload the renderer (fresh WebGL context, clean state).
+                // Main process, HTTP server, and WebSocket servers are untouched.
+                if (cmdParts[0].toLowerCase() === 'restart') {
+                    var msg = 'Restarting viewer...';
+                    addConsoleOutput(msg);
+                    cb(msg);
+                    // Delay so the HTTP response flushes and the console line renders
+                    // before the renderer tears down.
+                    setTimeout(function() { window.location.reload(); }, 100);
+                    return;
+                }
+
                 // Handle console overlay/compact locally before molstar dispatch
                 if (cmdParts[0].toLowerCase() === 'console' && cmdParts.length > 1) {
                     var sub = cmdParts[1].toLowerCase();

@@ -247,9 +247,14 @@ app.whenReady().then(() => {
   // IPC handler for reading show files
   ipcMain.handle('read-show-file', (_event, filePath: string) => {
     try {
+      // In dev, shows/ lives at APP_ROOT. In a packaged build, electron-builder
+      // copies it to process.resourcesPath via extraResources.
+      const showsRoot = app.isPackaged
+        ? path.join(process.resourcesPath, 'shows')
+        : path.join(process.env.APP_ROOT!, 'shows')
       const resolved = path.isAbsolute(filePath)
         ? filePath
-        : path.resolve(process.env.APP_ROOT!, 'shows', filePath)
+        : path.resolve(showsRoot, filePath)
       // Try exact path first, then with .show extension
       let target = resolved
       if (!fs.existsSync(target) && !target.endsWith('.show')) {
