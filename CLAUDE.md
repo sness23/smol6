@@ -100,6 +100,13 @@ npm run dev
 | Command | Description |
 |---------|-------------|
 | `load <pdbid>` | Load PDB structure (e.g., `load 1cbs`) |
+| `load <path>` | Load local file — relative paths resolve against session cwd (see `cd`/`pwd`) |
+| `load <url>` | Load from `http(s)://` or `file://` URL |
+| `pwd` | Print session working directory |
+| `cd [<path>]` | Change session working directory (`~` expansion, no-arg = home) |
+| `ls [<path>]` | List directory entries (default: cwd); dirs suffixed with `/`; capped at 500 |
+| `png [<file>] [width N] [height N] [transparent]` | Save viewport PNG to session cwd (or absolute path). Default filename `shot-YYYY-MM-DDTHHMMSS.png`. |
+| `screenshot ...` | Alias for `png` |
 | `color <color>` | Color all atoms |
 | `color @CA <color>` | Color alpha carbons |
 | `color :A <color>` | Color chain A |
@@ -112,6 +119,7 @@ npm run dev
 | `preset default` | Reset all canvas3d parameters and camera to startup defaults |
 | `present <file>` | Run interactive slideshow (Enter to advance, q to quit) |
 | `restart` | Reload the renderer — fresh WebGL context, clears all structures. Main process and HTTP/WS servers untouched. |
+| `exit` / `quit` | Quit the smol6 application (main process + all windows). |
 | `help` | Show available commands |
 
 ## Settings File (`~/.smol`)
@@ -129,6 +137,7 @@ smol6 reads a JSON settings file from `~/.smol` on startup. Create it manually i
 |---------|------|---------|-------------|
 | `consoleMode` | `"compact"` \| `"overlay"` | `"compact"` | Console mode on startup |
 | `zoom` | number | `3.0` | Window zoom factor (3.0 = 300%) |
+| `initialCwd` | string | `$HOME` | Starting session cwd (`~` expansion supported). Used by `pwd`/`cd`/`ls`/`load`. Falls back to `$HOME` if invalid. |
 
 Settings are loaded once at startup by `electron/main.ts` and passed to the renderer via IPC (`get-settings` channel). The renderer applies `consoleMode` after initialization.
 
@@ -171,6 +180,11 @@ A floating overlay (top-right, `#knob-hud`) shows parameter name, progress bar, 
 Some commands are intercepted in index.html before reaching molstar's ConsoleManager:
 - `console overlay` / `console compact` — handled locally for CSS mode switching
 - `preset default` — resets all canvas3d props to captured startup defaults
+- `restart` — `window.location.reload()` the renderer
+- `exit` / `quit` — send `app-quit` IPC; main calls `app.quit()`
+- `png` / `screenshot` — grab PNG via `viewportScreenshot.getImageDataUri()`, send base64 to main, main writes to session cwd. Bypasses molstar's browser-download path so files land in a specified directory, not `~/Downloads`.
+- `pwd` / `cd` / `ls` — backed by `fs-*` IPC to main (session cwd lives in main, survives `restart`)
+- `load <path|url>` — paths resolve against session cwd; absolute paths, `file://`, and `http(s)://` go straight to `viewer.loadStructureFromUrl`. 4-char alphanumeric args fall through to molstar (PDB ID).
 
 All other commands (including 900+ ChimeraX commands) pass through to `window.viewer.plugin.console.execute()`.
 
@@ -209,6 +223,12 @@ The main process resolves the file path from `process.argv` and sends it to the 
 | `execute-command` | main → renderer | Forward HTTP command server requests |
 | `command-result` | renderer → main | Return command execution result |
 | `load-file` | main → renderer | Send file path from CLI args |
+| `fs-pwd` | renderer → main | Return session cwd (invoke/handle) |
+| `fs-cd` | renderer → main | Change session cwd; returns `{ok, cwd}` or `{ok:false, error}` |
+| `fs-ls` | renderer → main | List dir entries; returns `{ok, cwd, entries, truncated, total}` |
+| `fs-resolve` | renderer → main | Resolve arg against session cwd → absolute path (used by `load` interceptor) |
+| `app-quit` | renderer → main | Quit the app (main calls `app.quit()`) |
+| `save-png` | renderer → main | Write PNG bytes (base64) to session-cwd-resolved path; returns `{ok, path}` or `{ok:false, error}` |
 | `main-process-message` | main → renderer | Startup timestamp (unused by renderer) |
 
 ## Presentation System (Video Production)

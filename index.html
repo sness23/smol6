@@ -247,19 +247,7 @@
                 // Listen for file to load from command line (via Electron IPC)
                 if (window.ipcRenderer) {
                     window.ipcRenderer.on('load-file', function(event, filePath) {
-                        var ext = filePath.split('.').pop().toLowerCase();
-                        var format = ext;
-                        // Map common extensions to Mol* format names
-                        if (ext === 'pdb') format = 'pdb';
-                        else if (ext === 'sdf' || ext === 'mol') format = 'sdf';
-                        else if (ext === 'mol2') format = 'mol2';
-                        else if (ext === 'cif' || ext === 'mmcif') format = 'mmcif';
-                        else if (ext === 'xyz') format = 'xyz';
-                        else if (ext === 'gro') format = 'gro';
-
-                        var fileUrl = 'file://' + filePath;
-                        addConsoleOutput('Loading file: ' + filePath);
-                        viewer.loadStructureFromUrl(fileUrl, format, false);
+                        loadFromUrl('file://' + filePath);
                     });
 
                     // Listen for remote commands (via HTTP server on port 8888)
@@ -593,6 +581,45 @@
                 return true;
             }
 
+            function formatFromPath(p) {
+                var noQuery = p.split('?')[0].split('#')[0];
+                var ext = noQuery.split('.').pop().toLowerCase();
+                if (ext === 'pdb') return 'pdb';
+                if (ext === 'sdf' || ext === 'mol') return 'sdf';
+                if (ext === 'mol2') return 'mol2';
+                if (ext === 'cif' || ext === 'mmcif') return 'mmcif';
+                if (ext === 'xyz') return 'xyz';
+                if (ext === 'gro') return 'gro';
+                return 'mmcif';
+            }
+
+            function loadFromUrl(url, cb) {
+                cb = cb || function() {};
+                if (!window.viewer) {
+                    var err = 'Error: Viewer not initialized';
+                    addConsoleOutput(err); cb(err); return;
+                }
+                var format = formatFromPath(url);
+                addConsoleOutput('Loading: ' + url);
+                try {
+                    var p = window.viewer.loadStructureFromUrl(url, format, false);
+                    if (p && typeof p.then === 'function') {
+                        p.then(function() {
+                            var msg = 'Loaded: ' + url;
+                            addConsoleOutput(msg); cb(msg);
+                        }).catch(function(err) {
+                            var msg = 'load failed: ' + (err && err.message ? err.message : String(err));
+                            addConsoleOutput(msg); cb(msg);
+                        });
+                    } else {
+                        cb('Loading: ' + url);
+                    }
+                } catch (e) {
+                    var msg = 'load failed: ' + (e.message || String(e));
+                    addConsoleOutput(msg); cb(msg);
+                }
+            }
+
             function executeCommand(command, onResult) {
                 var cb = onResult || function() {};
 
@@ -626,6 +653,165 @@
                         var showPath = cmdParts.slice(1).join(' ');
                         startPresentation(showPath, cb);
                     }
+                    return;
+                }
+
+                // pwd — print session working directory
+                if (cmdParts[0].toLowerCase() === 'pwd') {
+                    if (window.ipcRenderer) {
+                        window.ipcRenderer.invoke('fs-pwd').then(function(cwd) {
+                            addConsoleOutput(cwd); cb(cwd);
+                        });
+                    } else {
+                        cb('');
+                    }
+                    return;
+                }
+
+                // cd [<path>] — change session working directory (main-process state)
+                if (cmdParts[0].toLowerCase() === 'cd') {
+                    var cdArg = cmdParts.length > 1 ? cmdParts.slice(1).join(' ') : '';
+                    if (window.ipcRenderer) {
+                        window.ipcRenderer.invoke('fs-cd', cdArg).then(function(res) {
+                            if (res && res.ok) {
+                                addConsoleOutput(res.cwd); cb(res.cwd);
+                            } else {
+                                var msg = 'cd: ' + (res ? res.error : 'ipc error');
+                                addConsoleOutput(msg); cb(msg);
+                            }
+                        });
+                    } else {
+                        cb('');
+                    }
+                    return;
+                }
+
+                // ls [<path>] — list entries in target (default: cwd)
+                if (cmdParts[0].toLowerCase() === 'ls') {
+                    var lsArg = cmdParts.length > 1 ? cmdParts.slice(1).join(' ') : '';
+                    if (window.ipcRenderer) {
+                        window.ipcRenderer.invoke('fs-ls', lsArg).then(function(res) {
+                            if (!res || !res.ok) {
+                                var msg = 'ls: ' + (res ? res.error : 'ipc error');
+                                addConsoleOutput(msg); cb(msg); return;
+                            }
+                            var lines = res.entries.map(function(e) {
+                                return e.isDir ? e.name + '/' : e.name;
+                            });
+                            if (res.truncated) {
+                                lines.push('... and ' + (res.total - res.entries.length) + ' more');
+                            }
+                            var out = lines.join('\n') || '(empty)';
+                            addConsoleOutput(out); cb(out);
+                        });
+                    } else {
+                        cb('');
+                    }
+                    return;
+                }
+
+                // load — intercept for path/URL handling; pass through PDB IDs to molstar
+                if (cmdParts[0].toLowerCase() === 'load' && cmdParts.length >= 2) {
+                    var loadArg = cmdParts.slice(1).join(' ').trim();
+                    // 4-char alphanumeric → PDB ID, let molstar handle it
+                    var isPdbId = /^[a-z0-9]{4}$/i.test(loadArg);
+                    if (!isPdbId) {
+                        var isUrl = /^(https?|file):\/\//i.test(loadArg);
+                        if (isUrl) {
+                            loadFromUrl(loadArg, cb);
+                            return;
+                        }
+                        // Treat as path — resolve against session cwd via main
+                        if (window.ipcRenderer) {
+                            window.ipcRenderer.invoke('fs-resolve', loadArg).then(function(res) {
+                                if (!res || !res.ok) {
+                                    var msg = 'load: ' + (res ? res.error : 'ipc error');
+                                    addConsoleOutput(msg); cb(msg); return;
+                                }
+                                loadFromUrl('file://' + res.absolutePath, cb);
+                            });
+                            return;
+                        }
+                        // No IPC → fall through to molstar, which will likely fail
+                    }
+                }
+
+                // png / screenshot — save viewport PNG to session cwd (or absolute path).
+                if (cmdParts[0].toLowerCase() === 'png' || cmdParts[0].toLowerCase() === 'screenshot') {
+                    var sArgs = cmdParts.slice(1);
+                    var sFilename = null, sWidth = null, sHeight = null, sTransparent = false;
+                    var si = 0;
+                    while (si < sArgs.length) {
+                        var sa = sArgs[si].toLowerCase();
+                        if (sa === 'width' && si + 1 < sArgs.length) { sWidth = parseInt(sArgs[si+1]); si += 2; }
+                        else if (sa === 'height' && si + 1 < sArgs.length) { sHeight = parseInt(sArgs[si+1]); si += 2; }
+                        else if (sa === 'transparent') { sTransparent = true; si += 1; }
+                        else if (!sFilename && isNaN(parseInt(sArgs[si]))) { sFilename = sArgs[si]; si += 1; }
+                        else { si += 1; }
+                    }
+                    if (!sFilename) {
+                        var d = new Date();
+                        var pad = function(n) { return String(n).padStart(2, '0'); };
+                        sFilename = 'shot-' + d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+                            + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()) + '.png';
+                    }
+                    if (!/\.(png|jpg|jpeg|webp)$/i.test(sFilename)) sFilename += '.png';
+
+                    if (!window.viewer || !window.viewer.plugin || !window.viewer.plugin.helpers || !window.viewer.plugin.helpers.viewportScreenshot) {
+                        var errVs = 'Error: screenshot helper not available';
+                        addConsoleOutput(errVs); cb(errVs); return;
+                    }
+                    var vs = window.viewer.plugin.helpers.viewportScreenshot;
+                    var oldValues = vs.values;
+                    var needsRestore = false;
+                    if ((sWidth && sHeight) || sTransparent) {
+                        var newValues = Object.assign({}, oldValues);
+                        if (sWidth && sHeight) {
+                            newValues.resolution = { name: 'custom', params: { width: sWidth, height: sHeight } };
+                        }
+                        if (sTransparent) newValues.transparent = true;
+                        vs.behaviors.values.next(newValues);
+                        needsRestore = true;
+                    }
+
+                    var restore = function() {
+                        if (needsRestore) { try { vs.behaviors.values.next(oldValues); } catch (e) {} }
+                    };
+
+                    vs.getImageDataUri().then(function(dataUri) {
+                        restore();
+                        var m = (dataUri || '').match(/^data:[^;]+;base64,(.*)$/);
+                        if (!m) { var e1 = 'png: unexpected image encoding'; addConsoleOutput(e1); cb(e1); return; }
+                        if (window.ipcRenderer) {
+                            window.ipcRenderer.invoke('save-png', { path: sFilename, base64: m[1] }).then(function(res) {
+                                if (res && res.ok) {
+                                    var msg = 'Saved: ' + res.path;
+                                    addConsoleOutput(msg); cb(msg);
+                                } else {
+                                    var msg = 'png: ' + (res ? res.error : 'ipc error');
+                                    addConsoleOutput(msg); cb(msg);
+                                }
+                            });
+                        } else {
+                            var e2 = 'png: no IPC (not running in Electron)';
+                            addConsoleOutput(e2); cb(e2);
+                        }
+                    }).catch(function(err) {
+                        restore();
+                        var msg = 'png failed: ' + (err && err.message ? err.message : String(err));
+                        addConsoleOutput(msg); cb(msg);
+                    });
+                    return;
+                }
+
+                // exit / quit — quit the Electron app via main process.
+                if (cmdParts[0].toLowerCase() === 'exit' || cmdParts[0].toLowerCase() === 'quit') {
+                    var msg = 'Quitting...';
+                    addConsoleOutput(msg);
+                    cb(msg);
+                    setTimeout(function() {
+                        if (window.ipcRenderer) window.ipcRenderer.send('app-quit');
+                    }, 100);
                     return;
                 }
 

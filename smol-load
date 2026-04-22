@@ -70,8 +70,9 @@ for arg in "$@"; do
         exit 1
     fi
 
-    if ! response="$(curl -sS -m 5 -X POST "$URL" --data-binary "load ${abs}" 2>&1)"; then
-        rc=$?
+    rc=0
+    response="$(curl -sS -m 5 -X POST "$URL" --data-binary "load ${abs}" 2>&1)" || rc=$?
+    if [[ $rc -ne 0 ]]; then
         if [[ $rc -eq 7 ]]; then
             echo "smol-load: cannot reach smol at $URL (is it running?)" >&2
         else

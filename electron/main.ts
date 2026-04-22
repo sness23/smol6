@@ -56,6 +56,7 @@ const SETTINGS_PATH = path.join(os.homedir(), '.smol')
 interface SmolSettings {
   consoleMode?: 'compact' | 'overlay'
   zoom?: number
+  initialCwd?: string
   [key: string]: unknown
 }
 
@@ -72,6 +73,33 @@ function loadSettings(): SmolSettings {
 }
 
 const settings = loadSettings()
+
+// Session cwd — the shell-style working directory shared by the in-app console
+// and the HTTP command server. Survives renderer reload (`restart`).
+function expandHome(p: string): string {
+  if (p === '~') return os.homedir()
+  if (p.startsWith('~/')) return path.join(os.homedir(), p.slice(2))
+  return p
+}
+
+function resolveUnderCwd(p: string): string {
+  const expanded = expandHome(p)
+  if (path.isAbsolute(expanded)) return path.normalize(expanded)
+  return path.resolve(sessionCwd, expanded)
+}
+
+let sessionCwd: string = (() => {
+  const raw = typeof settings.initialCwd === 'string' ? settings.initialCwd : os.homedir()
+  const expanded = expandHome(raw)
+  try {
+    if (fs.existsSync(expanded) && fs.statSync(expanded).isDirectory()) return expanded
+  } catch {
+    // fall through
+  }
+  return os.homedir()
+})()
+
+const LS_LIMIT = 500
 
 function startSpacemouseServer() {
   spacemouseWss = new WebSocketServer({ port: SPACEMOUSE_WS_PORT, host: '127.0.0.1' })
@@ -243,6 +271,64 @@ app.whenReady().then(() => {
 
   // IPC handler for settings
   ipcMain.handle('get-settings', () => settings)
+
+  // Session CWD: pwd / cd / ls / resolve
+  ipcMain.handle('fs-pwd', () => sessionCwd)
+
+  ipcMain.handle('fs-cd', (_event, arg: string) => {
+    const target = arg && arg.trim() ? arg.trim() : os.homedir()
+    try {
+      const resolved = resolveUnderCwd(target)
+      if (!fs.existsSync(resolved)) return { ok: false, error: `no such file or directory: ${target}` }
+      if (!fs.statSync(resolved).isDirectory()) return { ok: false, error: `not a directory: ${target}` }
+      sessionCwd = resolved
+      return { ok: true, cwd: sessionCwd }
+    } catch (e) {
+      return { ok: false, error: (e as Error).message }
+    }
+  })
+
+  ipcMain.handle('fs-ls', (_event, arg: string) => {
+    const target = arg && arg.trim() ? resolveUnderCwd(arg.trim()) : sessionCwd
+    try {
+      if (!fs.existsSync(target)) return { ok: false, error: `no such file or directory` }
+      const st = fs.statSync(target)
+      if (!st.isDirectory()) {
+        return { ok: true, cwd: target, entries: [{ name: path.basename(target), isDir: false }], truncated: false, total: 1 }
+      }
+      const raw = fs.readdirSync(target, { withFileTypes: true })
+        .filter((d) => !d.name.startsWith('.'))
+        .sort((a, b) => a.name.localeCompare(b.name))
+      const total = raw.length
+      const truncated = total > LS_LIMIT
+      const entries = raw.slice(0, LS_LIMIT).map((d) => ({ name: d.name, isDir: d.isDirectory() }))
+      return { ok: true, cwd: target, entries, truncated, total }
+    } catch (e) {
+      return { ok: false, error: (e as Error).message }
+    }
+  })
+
+  ipcMain.handle('fs-resolve', (_event, arg: string) => {
+    try {
+      return { ok: true, absolutePath: resolveUnderCwd(arg) }
+    } catch (e) {
+      return { ok: false, error: (e as Error).message }
+    }
+  })
+
+  ipcMain.on('app-quit', () => app.quit())
+
+  ipcMain.handle('save-png', (_event, arg: { path: string; base64: string }) => {
+    try {
+      const target = resolveUnderCwd(arg.path)
+      const dir = path.dirname(target)
+      if (!fs.existsSync(dir)) return { ok: false, error: `no such directory: ${dir}` }
+      fs.writeFileSync(target, Buffer.from(arg.base64, 'base64'))
+      return { ok: true, path: target }
+    } catch (e) {
+      return { ok: false, error: (e as Error).message }
+    }
+  })
 
   // IPC handler for reading show files
   ipcMain.handle('read-show-file', (_event, filePath: string) => {
