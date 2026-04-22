@@ -188,6 +188,12 @@ function createWindow() {
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
+      // Allow fetch() from the renderer to local files (file://) and
+      // non-CORS-enabled localhost servers. smol6 renders only trusted
+      // bundled content and never navigates to untrusted URLs, so the
+      // same-origin policy buys us nothing here and blocks the 'load'
+      // command from reaching local files.
+      webSecurity: false,
     },
   })
 

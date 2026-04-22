@@ -620,6 +620,30 @@
                 }
             }
 
+            // Route through molstar's PyMOL-style 'load' command so errors
+            // propagate, structures register in the session, and comma-separated
+            // args like `, format=mmcif` are parsed correctly (`open` splits on
+            // whitespace only and would glue a trailing comma onto the URL).
+            function openViaMolstar(url, cb) {
+                cb = cb || function() {};
+                if (!window.viewer || !window.viewer.plugin || !window.viewer.plugin.console) {
+                    var err = 'Error: Viewer not ready';
+                    addConsoleOutput(err); cb(err); return;
+                }
+                window.viewer.plugin.console.execute('load ' + url).then(function(result) {
+                    if (result && result.success) {
+                        if (result.message) addConsoleOutput(result.message);
+                        cb(result.message || 'OK');
+                    } else {
+                        var msg = 'Error: ' + (result && result.message ? result.message : 'load failed');
+                        addConsoleOutput(msg); cb(msg);
+                    }
+                }).catch(function(err) {
+                    var msg = 'Exception: ' + (err && err.message ? err.message : String(err));
+                    addConsoleOutput(msg); cb(msg);
+                });
+            }
+
             function executeCommand(command, onResult) {
                 var cb = onResult || function() {};
 
@@ -718,7 +742,7 @@
                     if (!isPdbId) {
                         var isUrl = /^(https?|file):\/\//i.test(loadArg);
                         if (isUrl) {
-                            loadFromUrl(loadArg, cb);
+                            openViaMolstar(loadArg, cb);
                             return;
                         }
                         // Treat as path — resolve against session cwd via main
@@ -728,7 +752,7 @@
                                     var msg = 'load: ' + (res ? res.error : 'ipc error');
                                     addConsoleOutput(msg); cb(msg); return;
                                 }
-                                loadFromUrl('file://' + res.absolutePath, cb);
+                                openViaMolstar('file://' + res.absolutePath, cb);
                             });
                             return;
                         }
