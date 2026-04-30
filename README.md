@@ -125,9 +125,10 @@ The smol viewer includes a powerful PyMOL-style console! 🎮
 
 #### Selection Syntax Examples
 
-- `@CA` - Select alpha carbons
-- `:A` - Select chain A
-- `color blue :A and @CA` - Color chain A alpha carbons blue
+- `@CA` - Select alpha carbons (`@` = atom name)
+- `/A` - Select chain A (`/` = chain — **not** `:`, which is residue in ChimeraX)
+- `#1` - Select model/structure with ID 1 (`#` = model)
+- `color blue /A & @CA` - Color chain A alpha carbons blue (`&` = intersection)
 
 ---
 

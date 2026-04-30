@@ -33,7 +33,7 @@ npm run lint     # ESLint for TypeScript (--max-warnings 0)
 npm run preview  # Preview production build
 ```
 
-There is no test suite — `package.json` defines only `dev`, `build`, `lint`, and `preview`. Don't hunt for test commands. Active development happens on the `present` branch, not `main`.
+There is no test suite — `package.json` defines only `dev`, `build`, `lint`, and `preview`. Don't hunt for test commands. Default branch is `main`; active work usually lives on a feature branch.
 
 ## Platforms
 
@@ -81,6 +81,12 @@ npm run dev
 | `smol-present` | Terminal-side presenter script (sends commands via HTTP 8888) |
 | `smol-cmd` | Send a single console command via HTTP 8888 |
 | `smol-load` | Load local file(s) by relative path — resolves to absolute path, then POSTs `load` |
+| `smol-repl` | Bash REPL: read commands from stdin, send each via HTTP 8888 |
+| `smol-cli.py` | Python REPL (uses `urllib`/`readline`) — same protocol as `smol-repl` |
+| `smol-play` | Replay a `.smol` script (timed command list — see below) via HTTP 8888 |
+| `smol-record` | `smol-play` + `ffmpeg x11grab` to record screen while a script plays |
+| `scripts/*.smol` | Timed command scripts for `smol-play`/`smol-record` |
+| `scripts/smol-gen-show.py` | Generates `.show` slideshow files from a template |
 
 ### Build Output
 
@@ -108,8 +114,9 @@ npm run dev
 | `png [<file>] [width N] [height N] [transparent]` | Save viewport PNG to session cwd (or absolute path). Default filename `shot-YYYY-MM-DDTHHMMSS.png`. |
 | `screenshot ...` | Alias for `png` |
 | `color <color>` | Color all atoms |
-| `color @CA <color>` | Color alpha carbons |
-| `color :A <color>` | Color chain A |
+| `color @CA <color>` | Color alpha carbons (`@` = atom name) |
+| `color /A <color>` | Color chain A (`/` = chain; **note**: `:` is *residue*, not chain — ChimeraX semantics) |
+| `color #2 <color>` | Color structure with model ID 2 (`#` = model; IDs increment monotonically and don't reset on `close` — use `list` to check) |
 | `close` | Clear all structures |
 | `console overlay` | Full-screen console overlay (mouse controls terminal, spacemouse/knobs control protein) |
 | `console compact` | Return to small bottom-left console |
@@ -282,13 +289,47 @@ Next slide narration here.
 
 ### Show Files
 
-Located in `shows/casp15/` — 15 pre-written shows for CASP15 ligand targets.
+Located in `shows/casp15/` — 15 pre-written shows for CASP15 ligand targets. Auto-generated shows live in `shows/generated/` (see `scripts/smol-gen-show.py` and `docs/auto-show-generation.md`).
+
+### `.smol` Script Format (for `smol-play` / `smol-record`)
+
+Distinct from `.show` slideshows — `.smol` files are timed command scripts with no narration:
+
+```
+# Comments start with #
+close
+load 1crn
+@2          # wait 2 seconds
+color :A red
+@1
+spin 0.5
+```
+
+- One command per line; blank lines and `#`-comments are skipped
+- `@N` lines pause for N seconds (script-level timing, not command-level)
+- Examples in `scripts/01-molecule-tour-crambin.smol`, `scripts/02-docking-tutorial-1cbs.smol`, `scripts/03-coding-demo.smol`
 
 ### IPC Channels (Presentation)
 
 | Channel | Direction | Purpose |
 |---------|-----------|---------|
 | `read-show-file` | renderer → main | Read .show file from disk (invoke/handle) |
+
+## Reference Docs (`docs/`)
+
+Long-form reference material that's worth grepping before guessing at Mol* internals:
+
+| File | Topic |
+|------|-------|
+| `console-commands-reference.md` | Full console command reference (canonical list) |
+| `all-canvas3d-params.md`, `unmapped-params.md` | Mol* `canvas3d` parameter tour |
+| `clipping-deep-dive.md`, `clip-radius.md`, `min-near.md`, `fog.md` | Clipping/fog/near-plane mechanics |
+| `materials.md`, `postprocessing-effects.md`, `global-illumination.md`, `interior-darkening.md` | Render/material parameter notes |
+| `knob-cheatsheet.md`, `knob-mapping-plan.md`, `zknobs-architecture.md` | MIDI knob mapping + hardware architecture |
+| `auto-show-generation.md` | `.show` file authoring / generator |
+| `RESEARCH-console-hide.md`, `TESTING-PLAN.md` | Design notes |
+| `SMOKETEST.md` | Manual run-through covering load / select / show-hide / align / png / restart, plus a "Today's focus" section for in-flight work |
+| `vr-setup.md`, `windows-port.md` | VR (Quest 2) and Windows-port checklists |
 
 ## Notes
 
