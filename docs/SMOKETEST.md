@@ -4,6 +4,25 @@ Run from a fresh `smol6` launch. Each step: paste the command, watch the viewpor
 
 When you find a step that fails, leave it unchecked, jot the symptom in **Today's focus** at the bottom, and keep going.
 
+## How to run
+
+Three things on screen at once:
+
+1. **smol6 running.** If it isn't already, `npm run dev` from the repo root.
+2. **This file open.** Pick whichever you prefer:
+   - `less docs/SMOKETEST.md` in a terminal pane
+   - your editor (so you can flip `☐` → `☑` as you tick boxes)
+   - `glow docs/SMOKETEST.md` for pretty rendered markdown
+3. **A terminal in `~/github/sness23/smol6`** so you can paste `./smol-cmd "<command>"` lines.
+
+Then top-to-bottom: paste command → look at the viewport → match it against the *expected* description on that line → tick the box. Whole run is ~5 min.
+
+**Alternative**: hit F2 inside smol6 and paste commands directly into the in-app console — same effect, one fewer window. The `./smol-cmd` route is preferred when you want a copy-paste log of the run.
+
+**When something fails**: leave the box unchecked, jot a one-liner under **Today's focus** at the bottom, keep going. Don't stop the run on the first miss; you want to know the full damage before a deep-dive.
+
+> Future plan: a CV-driven verifier reads the *expected* lines as assertions and runs the whole flow unattended. Until then, you're the AGI.
+
 ---
 
 ## 0. Setup
