@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# smol-side: launch a side smol6 instance for the mirror setup.
+#
+# Uses non-default ports (9888 / 9889) and a separate Chromium profile
+# (~/.smol6-side) so it can run alongside the main smol6 instance.
+#
+# Requires a production build (npm run build). Use the main smol6 instance
+# (npm run dev or the AppImage) on the default ports; the broker-relay
+# fans the same input out to both.
+#
+#   ./smol-side
+#   SMOL_HTTP_PORT=10888 SMOL_WS_PORT=10889 ./smol-side    # override ports
+
+set -euo pipefail
+
+REPO="$(cd "$(dirname "$0")" && pwd)"
+
+# Find a runnable binary, preferring the AppImage (bundles a working
+# chrome-sandbox helper). The unpacked binary needs chrome-sandbox to be
+# root-owned + setuid, which it usually isn't in a dev tree.
+BIN=""
+if compgen -G "$REPO/release/*/smol-Linux-*.AppImage" >/dev/null; then
+    BIN="$(ls "$REPO"/release/*/smol-Linux-*.AppImage | head -1)"
+elif compgen -G "$REPO/release/*/linux-unpacked/smol" >/dev/null; then
+    BIN="$(ls "$REPO"/release/*/linux-unpacked/smol | head -1)"
+fi
+
+if [[ -z "$BIN" ]]; then
+    echo "smol-side: no built binary found in $REPO/release/" >&2
+    echo "smol-side: run \`npm run build\` first" >&2
+    exit 1
+fi
+
+exec env \
+  SMOL_HTTP_PORT="${SMOL_HTTP_PORT:-9888}" \
+  SMOL_WS_PORT="${SMOL_WS_PORT:-9889}" \
+  SMOL_USER_DATA_DIR="${SMOL_USER_DATA_DIR:-$HOME/.smol6-side}" \
+  "$BIN" --no-sandbox "$@"

@@ -6,8 +6,37 @@ import os from 'node:os'
 import http from 'node:http'
 import { WebSocketServer, WebSocket } from 'ws'
 
-const COMMAND_PORT = 8888
-const SPACEMOUSE_WS_PORT = 8889
+// Override the Chromium user data dir if SMOL_USER_DATA_DIR is set.
+// This must run before the app emits 'ready' so that any internal Electron
+// path lookups see the new value. Required when running two smol6 instances
+// side-by-side (the mirror setup) — Chromium refuses two processes sharing
+// the same profile.
+{
+  const dir = process.env.SMOL_USER_DATA_DIR
+  if (dir) {
+    const expanded = dir.startsWith('~/')
+      ? path.join(os.homedir(), dir.slice(2))
+      : dir
+    const abs = path.isAbsolute(expanded) ? expanded : path.resolve(expanded)
+    try { fs.mkdirSync(abs, { recursive: true }) } catch { /* ignore */ }
+    app.setPath('userData', abs)
+    console.log(`[smol6] user data dir: ${abs}`)
+  }
+}
+
+function envInt(name: string, fallback: number): number {
+  const raw = process.env[name]
+  if (!raw) return fallback
+  const n = parseInt(raw, 10)
+  if (!Number.isFinite(n) || n <= 0 || n > 65535) {
+    console.warn(`[smol6] invalid ${name}="${raw}", using ${fallback}`)
+    return fallback
+  }
+  return n
+}
+
+const COMMAND_PORT       = envInt('SMOL_HTTP_PORT', 8888)
+const SPACEMOUSE_WS_PORT = envInt('SMOL_WS_PORT',   8889)
 
 // Get file path from command line arguments (skip electron args)
 function getFileFromArgs(): string | null {

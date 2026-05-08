@@ -7,6 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:side": "SMOL_HTTP_PORT=9888 SMOL_WS_PORT=9889 SMOL_USER_DATA_DIR=$HOME/.smol6-side vite --port 5174",
     "build": "tsc && vite build && electron-builder",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
