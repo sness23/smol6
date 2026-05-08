@@ -157,9 +157,30 @@ When in overlay mode (`console overlay`), the console covers the entire window w
 
 Use `console compact` or restart with `"consoleMode": "compact"` to return to the small console.
 
+## Side instance (mirror setup)
+
+To run a second smol6 alongside the main one (e.g. one on the main display, one on a side window, both showing the same molecule responding to the same input):
+
+```bash
+npm run dev          # main instance:  ports 8888 / 8889, Vite 5173, default profile
+npm run dev:side     # side instance:  ports 9888 / 9889, Vite 5174, ~/.smol6-side profile
+```
+
+`dev:side` sets these env vars before running Vite + Electron:
+- `SMOL_HTTP_PORT=9888`
+- `SMOL_WS_PORT=9889`
+- `SMOL_USER_DATA_DIR=$HOME/.smol6-side`  (Chromium needs a distinct profile per process)
+- `vite --port 5174`  (so Vite doesn't collide with the main instance on 5173)
+
+Defaults remain 8888/8889 when no env vars are set, so existing workflows are unchanged.
+
+There's also a `./smol-side` wrapper that runs the **packaged AppImage** with the same env-var setup — useful if you've done `npm run build` and want to run the side window from the production build.
+
+Pair either approach with two broker-relay processes (one per port) to fan the same input out to both windows. See `~/data/dev/broker/README.md` "Running the full system" section.
+
 ## Hardware Control (zknobs / SpaceMouse)
 
-smol6 accepts real-time hardware input via a WebSocket server on port 8889:
+smol6 accepts real-time hardware input via a WebSocket server on port 8889 (configurable via `SMOL_WS_PORT`):
 
 ```
 Midi Fighter Twister (USB MIDI) → zknobs.py → WebSocket ws://127.0.0.1:8889
