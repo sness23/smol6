@@ -6,6 +6,12 @@ import os from 'node:os'
 import http from 'node:http'
 import { WebSocketServer, WebSocket } from 'ws'
 
+// Silence dev-mode security warnings about webSecurity:false / CSP / insecure
+// content. webSecurity:false is intentional (see createWindow below) so the
+// `load` command can reach local files; the warnings auto-suppress in
+// packaged builds anyway, this just quiets them during `npm run dev`.
+process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
+
 // Override the Chromium user data dir if SMOL_USER_DATA_DIR is set.
 // This must run before the app emits 'ready' so that any internal Electron
 // path lookups see the new value. Required when running two smol6 instances
