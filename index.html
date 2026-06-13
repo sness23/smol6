@@ -1058,8 +1058,18 @@
             (function() {
                 if (!window.ipcRenderer) return;
 
-                var ROTATE_SCALE = 0.000015625;
-                var TRANSLATE_SCALE = 0.00078125;
+                // Base per-event scale: raw SpaceMouse delta -> radians (rotate)
+                // / world units (translate). The effective scale is this times
+                // window.SPACEMOUSE_SENS, read fresh on every event so you can
+                // tune sensitivity live from devtools without a restart, e.g.
+                //   window.SPACEMOUSE_SENS.translate = 8
+                //   window.SPACEMOUSE_SENS.rotate = 4
+                // Bump the defaults here to make the model move more per unit of
+                // stick deflection (ChimeraX-style). rotate/translate are
+                // independent so panning and tumbling tune separately.
+                var ROTATE_SCALE_BASE = 0.000015625;
+                var TRANSLATE_SCALE_BASE = 0.00078125;
+                window.SPACEMOUSE_SENS = window.SPACEMOUSE_SENS || { rotate: 3, translate: 4 };
 
                 window.ipcRenderer.on('spacemouse-event', function(event, data) {
                     try {
@@ -1352,7 +1362,10 @@
                         var camera = canvas3d.camera;
                         if (!camera) return;
 
-                        // Apply rotation (rx, ry, rz) and translation (x, y, z)
+                        // Apply rotation (rx, ry, rz) and translation (x, y, z).
+                        // Effective scale = base * live sensitivity (read each event).
+                        var ROTATE_SCALE = ROTATE_SCALE_BASE * window.SPACEMOUSE_SENS.rotate;
+                        var TRANSLATE_SCALE = TRANSLATE_SCALE_BASE * window.SPACEMOUSE_SENS.translate;
                         var snapshot = camera.getSnapshot();
                         var rx = -ev.rx * ROTATE_SCALE;
                         var ry = -ev.ry * ROTATE_SCALE;
