@@ -343,6 +343,22 @@ Found trying to CPK-colour ligand sticks so they read against a coloured cartoon
 **Render-verified** on an isolated ball-and-stick ligand that filled the frame, so
 it's unambiguous (not a tiny-ligand visibility issue).
 
+**✅ Resolved 2026-06-19.** Root cause: `color <name>` paints an *overpaint* layer,
+while element/scheme colouring only changes the base colour *theme* — overpaint is
+drawn on top, so the theme was masked (the ligand stayed the overpaint colour).
+Fixes in molstar0:
+- `applyColorScheme` (the `color #N byelement`/`byhet`/`bychain`/… path) and
+  `applyColorTheme` (the `cpk`/`element`/`chainid`/… commands) now clear overpaint
+  before applying the theme, so the colouring is actually visible.
+- `color #N <scheme>` now scopes to model `#N` and validates it — it previously
+  recoloured every structure and reported success even for a non-existent id
+  (`color #1 byelement` on a missing #1 now errors).
+Render-verified: `color #N byelement` and `cpk #N` show CPK colours (after a prior
+`color red`) on the production bundle.
+**Limitation:** a scheme is a whole-representation theme, so a sub-model spec like
+`color /L byelement` still colours the whole structure by element (model `#N`
+scoping works; chain/residue scoping would need per-atom element overpaint).
+
 ### M. element / CPK colouring does nothing on atoms, though it reports success
 - **Repro:** `close`; load a ligand; `style ball-and-stick #N`; `color #N red`
   (→ ligand goes fully red, confirmed in render); then ANY of:
