@@ -1357,6 +1357,34 @@
                             return;
                         }
 
+                        // SpaceMouse hardware buttons (3Dconnexion Compact):
+                        //   left  (bnum 0) -> toggle the console
+                        //   right (bnum 1) -> Reset Zoom + Orient Axes + Reset Axes
+                        // spacemouse.py emits {type:'button', bnum, press}; act on
+                        // the press edge only (ignore the release).
+                        if (ev.type === 'button') {
+                            if (!ev.press) return;
+                            if (ev.bnum === 0) {
+                                // Toggle the console (mirror the F2 key behavior).
+                                try {
+                                    if (consoleDiv.classList.contains('visible')) {
+                                        hideConsole();
+                                    } else {
+                                        consoleAutoShow = true;
+                                        showConsole();
+                                    }
+                                } catch (e) {}
+                            } else if (ev.bnum === 1) {
+                                try {
+                                    var cam = viewer.plugin.managers.camera;
+                                    cam.reset(undefined, 0);       // Reset Zoom (fit scene to view)
+                                    cam.orientAxes(undefined, 0);  // Orient Axes (lay flat)
+                                    cam.resetAxes(0);              // Reset Axes (align to screen axes)
+                                } catch (e) {}
+                            }
+                            return;
+                        }
+
                         if (ev.type !== 'motion') return;
 
                         var camera = canvas3d.camera;
