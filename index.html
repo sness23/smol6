@@ -1071,6 +1071,26 @@
                 var TRANSLATE_SCALE_BASE = 0.00078125;
                 window.SPACEMOUSE_SENS = window.SPACEMOUSE_SENS || { rotate: 3, translate: 4 };
 
+                // Rotation acceleration. The raw mapping above is linear, so a
+                // gentle nudge and a full push differ only by the constant
+                // SENS.rotate. This adds a deflection-dependent boost on top:
+                // small movements stay precise (boost ~1) while a full-throw
+                // push tumbles ACCEL.max times faster. The SpaceMouse caps raw
+                // rx/ry/rz at ~350 at full deflection (measured), so ref=350
+                // means max push hits the full ACCEL.max multiplier.
+                //   boost = 1 + (max-1) * min(|raw|/ref, 1)^curve
+                //   max   : top-end multiplier at full deflection (9 = 9x)
+                //   ref   : raw spnav delta treated as full deflection
+                //   curve : ramp shape (1 = linear, 2 = ease-in, precise middle)
+                // Live-tunable from devtools like SPACEMOUSE_SENS, e.g.
+                //   window.SPACEMOUSE_ACCEL.max = 4
+                window.SPACEMOUSE_ACCEL = window.SPACEMOUSE_ACCEL || { max: 9, ref: 350, curve: 2 };
+                function rotAccel(raw) {
+                    var a = window.SPACEMOUSE_ACCEL;
+                    var n = Math.min(Math.abs(raw) / a.ref, 1);
+                    return 1 + (a.max - 1) * Math.pow(n, a.curve);
+                }
+
                 window.ipcRenderer.on('spacemouse-event', function(event, data) {
                     try {
                         var ev = JSON.parse(data);
@@ -1395,9 +1415,9 @@
                         var ROTATE_SCALE = ROTATE_SCALE_BASE * window.SPACEMOUSE_SENS.rotate;
                         var TRANSLATE_SCALE = TRANSLATE_SCALE_BASE * window.SPACEMOUSE_SENS.translate;
                         var snapshot = camera.getSnapshot();
-                        var rx = -ev.rx * ROTATE_SCALE;
-                        var ry = -ev.ry * ROTATE_SCALE;
-                        var rz = -ev.rz * ROTATE_SCALE;
+                        var rx = -ev.rx * ROTATE_SCALE * rotAccel(ev.rx);
+                        var ry = -ev.ry * ROTATE_SCALE * rotAccel(ev.ry);
+                        var rz = -ev.rz * ROTATE_SCALE * rotAccel(ev.rz);
                         var tx = -ev.x * TRANSLATE_SCALE;
                         var ty = -ev.y * TRANSLATE_SCALE;
                         var tz = -ev.z * TRANSLATE_SCALE;

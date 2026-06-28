@@ -379,3 +379,42 @@ scoping works; chain/residue scoping would need per-atom element overpaint).
 - **Impact:** can't CPK-colour ligands or any atoms — the standard way to make a
   small molecule readable. Workaround: a bright uniform named colour
   (e.g. `color /L yellow`).
+- **UPDATE 2026-06-19 — core fixed, but scoping regressed (see M2).** Element
+  colouring now applies (isolated ligand → proper CPK: teal C, red O, blue N,
+  yellow-green F, render-confirmed). Good. But it ignores the selection — see M2.
+
+### M2. element/CPK colouring scopes among ligands but LEAKS onto the receptor/cartoon
+Refined 2026-06-19 with controlled render tests (corrects an earlier "recolours the
+whole scene" reading — it's more specific than that).
+- **Repro A — ligands only (WORKS):** load two ball-and-stick ligands, NO receptor;
+  `color #A red`; `color #B byelement` → A stays fully red, B gets proper CPK
+  (gold C, blue N, red O, green F). **Scopes correctly** between the two ligand
+  structures. ✅ render-confirmed.
+- **Repro B — receptor present (LEAKS):** load a receptor as cartoon (any colour) +
+  ligand sticks; `color #<ligand-id> byelement` (per-structure, naming ONE ligand)
+  → the **receptor cartoon also recolours** to byelement's carbon colour (gold),
+  even though the spec named only a ligand. `color /L byelement` does the same.
+- **So:** byelement honours the spec relative to other *ligand* structures, but
+  still **bleeds onto the receptor / polymer cartoon** whenever one is loaded.
+- **Contrast:** plain `color #N <name>` scopes fully (never touches the receptor);
+  byelement should match it.
+- **Impact:** blocks the common "domain/grey cartoon + CPK ligand sticks" figure —
+  CPK-colouring the ligands golds the whole protein. (Workaround in scenes: keep
+  ligands on plain per-site colours, which scope correctly.)
+- **Want:** byelement/cpk/element honour `#id`/`/L`/`:range`/`sel` exactly like
+  `color #N <name>`, including NOT recolouring the receptor when a ligand is named.
+
+### E. Command server loses rendering/screenshot ability mid-session ("No 3D canvas available")
+- **Repro:** earlier in the same session, `load`+`chainid`+`orient`+`png` rendered complexes fine
+  and wrote PNGs. Later (after idle / loading an 88k-atom model), `windowsize` → `Error: No 3D
+  canvas available`; `load`/`chainid`/`orient` still return success strings, but `png` →
+  `Error: screenshot helper not available`. The command server stays up and accepts geometry/color
+  commands but can no longer render or screenshot.
+- **Impact:** scripted figure capture is unreliable across a long session — the viewer can silently
+  enter a state where it accepts commands but produces no output, with no way to recover over the
+  HTTP API.
+- **Expected:** `png`/screenshot should work whenever the server is up, or the server should report
+  the canvas as unavailable on *all* commands (not just some) and expose a way to re-attach the
+  canvas. Large-structure load (~88k atoms) as a possible trigger is worth checking.
+- **Workaround:** rendered that figure with an external matplotlib-3D fallback; smol6 can re-render
+  once the canvas is restored (app refocus/reload).
