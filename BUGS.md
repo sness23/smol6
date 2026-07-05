@@ -418,3 +418,187 @@ whole scene" reading — it's more specific than that).
   canvas. Large-structure load (~88k atoms) as a possible trigger is worth checking.
 - **Workaround:** rendered that figure with an external matplotlib-3D fallback; smol6 can re-render
   once the canvas is restored (app refocus/reload).
+
+## 2026-07-02 — `transparency` is a stub (surface renders fully opaque)
+
+Found while building the pocket-view preset for the smol6 Claude Code plugin
+(`~/github/sness23/smol-claude-plugin`). Loaded structure: DDB1 receptor
+(protein-only PDB, ~9300 atoms) + one crystal ligand as separate models.
+
+### T1. `transparency` reports success but does nothing — self-declares "full implementation pending"
+- **Commands (in order):**
+  ```
+  style surface #102        # receptor -> molecular surface
+  color #102 gray
+  transparency #102 0.5     # want a translucent surface to see the pocketed ligand
+  focus #103                # the ligand
+  png /tmp/pocket.png width 1600 height 1200
+  ```
+- **Got:** `transparency #102 0.5` returns
+  `Set #102 transparency to 50% (note: full implementation pending)` — the
+  response string literally flags it as unimplemented. The rendered surface is
+  **fully opaque**; the ligand (yellow sticks) is almost entirely hidden behind
+  it, only a sliver poking through a gap.
+- **Expected:** opacity 0.5 → a translucent surface you can see the ligand
+  through. This is the standard "ligand inside a translucent pocket surface"
+  figure — the whole point of surfacing a receptor around a bound ligand.
+- **Impact:** `--surface` pocket views are not usable — an opaque surface buries
+  the ligand it's meant to showcase. The plugin's pocket preset therefore
+  defaults to **grey cartoon + ligand sticks** (which reads the pocket fine) and
+  only offers `--surface` behind a printed "transparency may be a stub" warning.
+- **Also applies to:** `transparency <opacity>` (all) and `surface transparency
+  <value>` are worth checking together — the per-rep opacity path in general.
+- **Want:** wire `transparency [target] [opacity]` to the representation's alpha
+  so `transparency #N 0.5` actually renders at 50% (and drop the
+  "implementation pending" note once it lands). Relatedly, bug #2 (resolved list)
+  notes per-residue *color* doesn't reach surface/spacefill reps — transparency
+  is the same rep-property gap on the opacity axis.
+
+### T2. Multi-model / NMR-ensemble load no longer registers as a trajectory — `play` fails
+- **REGRESSION:** this worked ~2026-06-18 (watched a 50-frame MD trajectory
+  animate from a multi-model PDB via `load` + `play`); it does not now.
+- **Repro A (local multi-model PDB):**
+  ```
+  load /…/Cterm_traj.pdb     # a 50-MODEL PDB (one MODEL per MD frame)
+  coordset                   # -> "Total models/frames: 1 … Single model structure (no trajectory data)"
+  frame                      # -> "Single frame structure (no trajectory). Frame 1 of 1."
+  play 8                     # -> "Error: No trajectory to play. Load a multi-frame structure first."
+  models                     # -> lists the MODELs as SEPARATE structures (1, 2, 3 … each ~8953 atoms), not frames
+  ```
+- **Repro B (canonical NMR ensemble, rules out the file):**
+  ```
+  load 1d3z                  # ubiquitin, 10 NMR MODELs from RCSB (fetched as MMCIF)
+  coordset                   # -> "Total models/frames: 1 … no trajectory data"
+  play 5                     # -> "Error: No trajectory to play."
+  ```
+- **Got:** a multi-model structure collapses to a single frame (RCSB fetch) or
+  explodes into N separate static models (local PDB). Either way `coordset`/
+  `frame`/`play` see one frame — no animation.
+- **Expected:** N MODEL records → one structure with N coordinate sets (frames),
+  navigable by `coordset`/`frame` and animatable by `play` (the June behavior).
+- **Impact:** MD-trajectory and NMR-ensemble playback is dead — the whole
+  `play`/`frame`/`coordset` subsystem has nothing to act on. Blocks the smol6
+  Claude-plugin `traj` preset (it now detects `coordset` == 1 frame and warns
+  instead of silently claiming to play).
+- **Note:** the multi-model file still renders fine as a static frame (cartoon +
+  ligand look correct) — this is purely the frame-ingestion/animation path.
+
+#### Source investigation (2026-07-03) — molstar0 code paths
+
+Searched `~/github/sness23/molstar0/src`. The crux: `frame`/`play`/`coordset` all
+derive their frame count from **one number** — `Trajectory.frameCount` — and it is
+coming back as **1** for genuinely multi-model inputs.
+
+- **Where the count is read:** `src/mol-console/commands/chimerax/trajectory-commands.ts`,
+  `getTrajectoryInfo()` (~line 41-76): `totalFrames = trajectories[0].obj.data.frameCount`
+  (selects `PluginStateObject.Molecule.Trajectory`). `PlayCommand`/`FrameCommand`
+  bail with "no trajectory" whenever `totalFrames <= 1`. So the readout is only as
+  good as the parsed trajectory — the navigation code itself looks correct.
+- **Load path A — local file / `file://` / `http` (the MD case):** built app
+  `smol6/index.html:605` calls `viewer.loadStructureFromUrl(url, format, false)` →
+  `src/apps/smol/app.ts:107` → the **`DownloadStructure`** action with
+  `createDefaultParams`, whose root-structure type defaults to **`'auto'`**
+  (`src/mol-plugin-state/actions/structure.ts:29`). `'auto'` materializes a single
+  deposited model.
+- **Load path B — 4-char PDB id:** console `open` (`structure.ts:299` & `:347`)
+  does `parseTrajectory(data, fmt)` then `applyPreset(trajectory, 'default')`.
+- **Two candidate root causes** (couldn't fully disambiguate without instrumenting
+  a build — both produce `frameCount == 1`):
+  1. **`parseTrajectory` is yielding a 1-frame trajectory** for these inputs (the
+     MODEL records / `pdbx_PDB_model_num` aren't being merged into frames). If so
+     the defect is upstream of the preset, in how the fork wires format detection /
+     parsing in the `load` path — stock mol* scrubs NMR models fine, so this fork
+     diverges somewhere in `loadStructureFromUrl`/format handling. **Most likely.**
+  2. **`getTrajectoryInfo` selects the wrong/ghost `Trajectory` node** (e.g. the
+     `DownloadStructure` path leaves the multi-frame trajectory as a ghost/nested
+     node and `selectQ(Trajectory)[0]` picks a 1-frame one). Less likely but cheap
+     to rule out.
+- **Note on the `all-models` preset:** `src/mol-plugin-state/builder/structure/hierarchy-preset.ts:85-122`
+  (`preset-trajectory-all-models`) is NOT the fix — it loops `frameCount` and builds
+  **N separate static structures** (overlaid, colored by trajectory-index), which is
+  a different feature (show-all-NMR-models) and is not navigable by `frame`/`play`.
+  Playback needs the **`default`** trajectory preset: a single model via
+  `StateTransforms.Model.ModelFromTrajectory` whose `modelIndex` `FrameCommand`
+  bumps, with the multi-frame `Trajectory` retained.
+- **Decisive next diagnostic:** log `trajectory.data.frameCount` immediately after
+  `parseTrajectory` in `app.ts:loadStructureFromUrl` (and in the `DownloadStructure`
+  build) for a local 50-MODEL PDB. If it's 50 there but 1 at `getTrajectoryInfo`, it's
+  cause #2 (state-selection); if it's 1 right after parse, it's cause #1 (parse/wiring).
+- **Suggested fix direction:** route `load` so a multi-frame parse keeps a navigable
+  single-model-over-trajectory (the `'default'` trajectory preset path used by
+  `loadStructureFromData`, `app.ts:132`), rather than `DownloadStructure`'s `'auto'`
+  single-model collapse — i.e. detect `frameCount > 1` and build via
+  `parseTrajectory` + `applyPreset('default')` keeping the trajectory node.
+- **Was working ~2026-06-18** (memory: watched these exact MD PDBs animate), so a
+  commit since then changed the local-file `load` wiring. `git -C molstar0 log`
+  around `apps/smol/app.ts` (`91a5560 More`) and `mol-console/.../structure.ts`
+  (`f54ce72 Fix OpenCommand for local files…`) are the places to bisect.
+
+#### Fix plan (for the implementing agent)
+
+Do these in order. All paths are in `~/github/sness23/molstar0` unless noted.
+
+1. **Confirm which cause (do this first — 5 min, decides the fix).** Temporarily
+   log the parsed frame count in the local-file load path:
+   in `src/apps/smol/app.ts` `loadStructureFromUrl` (~line 107), before returning,
+   `parseTrajectory` the same data and `console.log('frameCount', trajectory.data.frameCount)`
+   (or add the log inside the `DownloadStructure` build). Rebuild (step 4), load
+   `…/T2383/md/robust/out/Cterm_traj.pdb`, read the devtools console.
+   - **frameCount == 50 after parse** → cause #2 (state-selection): the multi-frame
+     trajectory exists but `getTrajectoryInfo()` in
+     `src/mol-console/commands/chimerax/trajectory-commands.ts` isn't finding it
+     (it's ghost/nested, or `selectQ(Trajectory)[0]` is the wrong node). Fix there:
+     select the trajectory that actually feeds the visible model, or read frame
+     count off the model's parent trajectory rather than `[0]`.
+   - **frameCount == 1 after parse** → cause #1 (parse/wiring): the `load` route is
+     collapsing models. Go to step 2.
+
+2. **Fix the load route (cause #1).** Make `loadStructureFromUrl` retain a navigable
+   multi-frame trajectory instead of `DownloadStructure`'s `'auto'` single-model
+   collapse. Mirror `loadStructureFromData` (`app.ts:132`) which already does the
+   right thing:
+   ```ts
+   const data = await plugin.builders.data.download({ url, isBinary }, …);
+   const trajectory = await plugin.builders.structure.parseTrajectory(data, format);
+   await plugin.builders.structure.hierarchy.applyPreset(
+       trajectory, 'default', { representationPresetParams: options?.representationParams });
+   ```
+   Gate on frames if you want to preserve current single-model behavior for normal
+   structures: if `trajectory.data.frameCount > 1` use the `'default'` **trajectory**
+   preset (single model via `ModelFromTrajectory`, trajectory node retained — NOT
+   `'all-models'`, which builds N separate overlaid structures); else keep the
+   existing `DownloadStructure` path. Keep label/representationParams handling that
+   `loadStructureFromUrl` currently passes through.
+
+3. **Check the console `open` path too** (`src/mol-console/commands/chimerax/structure.ts:299` & `:347`).
+   It already uses `parseTrajectory` + `applyPreset('default')`, yet `load 1d3z`
+   still showed 1 frame — so if the diagnostic says parse==1 for the RCSB mmcif,
+   the parse/format detection is the shared culprit and fixing it helps both paths.
+
+4. **Rebuild + deploy the bundle:**
+   ```bash
+   cd ~/github/sness23/molstar0 && npm run build:apps
+   cd ~/github/sness23/smol6
+   cp ../molstar0/build/smol/molstar.js ../molstar0/build/smol/molstar.css ../molstar0/build/smol/favicon.ico public/smol/
+   cp -r ../molstar0/build/smol/images public/smol/
+   # restart smol6 (npm run dev, or relaunch the AppImage)
+   ```
+
+5. **Verify (must pass):** with smol6 running,
+   ```bash
+   smolshow cmd "close"
+   smolshow cmd "load /home/sness/data/vaults/casp/inputs/casp17/T2383/md/robust/out/Cterm_traj.pdb"
+   smolshow cmd "coordset"     # expect: Total models/frames: 50
+   smolshow cmd "frame next"   # expect: Frame 2 of 50
+   smolshow cmd "play 8"       # expect: animation (NOT "No trajectory to play")
+   smolshow cmd "load 1d3z"    # NMR control -> coordset should report 10
+   ```
+   Then re-run the plugin preset end-to-end:
+   `smolshow traj …/Cterm_traj.pdb --resn MOL --color yellow --fps 8` should now
+   print ">> playing 50 frames" instead of the single-frame warning. (`smolshow` =
+   `~/github/sness23/smol-claude-plugin/bin/smolshow`.)
+
+6. **On success:** remove the `traj`-preset single-frame warning's "currently
+   broken" wording in the smol6 Claude plugin
+   (`smol-claude-plugin/{bin/smolshow,skills/smol/SKILL.md,commands/smol-traj.md}`),
+   and move this T2 entry to the Resolution list at the top with the fix commit.
