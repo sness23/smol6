@@ -1051,6 +1051,23 @@
                     if (settings.consoleMode) {
                         setConsoleMode(settings.consoleMode);
                     }
+                    // Transparent (OBS) instance: the Electron window is a
+                    // depth-32 ARGB window, so switch the renderer to a
+                    // transparent background out of the box (the Transp. BG
+                    // knob can still toggle it live afterward).
+                    if (settings.transparent) {
+                        var enableTransparentBg = function() {
+                            var v = window.viewer;
+                            if (v && v.plugin && v.plugin.canvas3d) {
+                                v.plugin.canvas3d.setProps({ transparentBackground: true });
+                            }
+                        };
+                        if (window.viewer && window.viewer.plugin && window.viewer.plugin.canvas3d) {
+                            enableTransparentBg();
+                        } else {
+                            window.addEventListener('molstarViewerCreated', enableTransparentBg, { once: true });
+                        }
+                    }
                 });
             }
 

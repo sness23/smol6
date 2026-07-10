@@ -145,6 +145,7 @@ smol6 reads a JSON settings file from `~/.smol` on startup. Create it manually i
 | `consoleMode` | `"compact"` \| `"overlay"` | `"compact"` | Console mode on startup |
 | `zoom` | number | `3.0` | Window zoom factor (3.0 = 300%) |
 | `initialCwd` | string | `$HOME` | Starting session cwd (`~` expansion supported). Used by `pwd`/`cd`/`ls`/`load`. Falls back to `$HOME` if invalid. |
+| `transparent` | boolean | `false` | Launch a depth-32 ARGB, frameless window so OBS's XComposite capture (or any compositor) can read the canvas alpha channel. The renderer turns on `canvas3d.transparentBackground` at startup; the "Transp. BG" knob still toggles it live. Set at launch only — can't be toggled at runtime. See "Transparent capture for OBS" below. |
 
 Settings are loaded once at startup by `electron/main.ts` and passed to the renderer via IPC (`get-settings` channel). The renderer applies `consoleMode` after initialization.
 
@@ -156,6 +157,18 @@ When in overlay mode (`console overlay`), the console covers the entire window w
 - The **MIDI knobs** control clip/fog/other parameters
 
 Use `console compact` or restart with `"consoleMode": "compact"` to return to the small console.
+
+## Transparent capture for OBS
+
+To composite the molecule over another OBS layer (transparent background, no green-screen chroma key), the Electron window itself must carry an alpha channel — the "Transp. BG" knob alone isn't enough because a normal depth-24 window makes OBS discard alpha.
+
+1. **Launch a transparent instance.** Put `"transparent": true` in `~/.smol` (or run a dedicated recording profile with it). This creates a depth-32 ARGB, frameless window and turns on `canvas3d.transparentBackground` at startup. The knob still toggles it live.
+2. **Capture with the right source.** In OBS use **Window Capture (XComposite)** — *not* XSHM screen capture or PipeWire, which composite against the desktop and can't carry alpha. Leave **"Exclude Alpha" unchecked**.
+3. Because the window is depth-32, OBS reads its BGRA pixmap and preserves transparency (`obs-studio/plugins/linux-capture/xcomposite-input.c` forces opaque only when `depth != 32`). Put any layer behind the source in your scene.
+
+Notes / trade-offs:
+- Requires an **X11** session (`XComposite`). On Wayland/PipeWire, fall back to a solid-color background + OBS Chroma Key.
+- The transparent window is **frameless** (no OS titlebar) and can't be toggled to opaque at runtime — it's meant for a dedicated recording instance. Leave `transparent` unset for normal use.
 
 ## Side instance (mirror setup)
 

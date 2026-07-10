@@ -92,6 +92,11 @@ interface SmolSettings {
   consoleMode?: 'compact' | 'overlay'
   zoom?: number
   initialCwd?: string
+  // When true, create a depth-32 ARGB (transparent, frameless) window so a
+  // desktop compositor / OBS XComposite capture can read the canvas alpha
+  // channel. Opt-in — used for a dedicated recording instance. The window's
+  // transparency can't be toggled at runtime, so this must be set at launch.
+  transparent?: boolean
   [key: string]: unknown
 }
 
@@ -108,6 +113,17 @@ function loadSettings(): SmolSettings {
 }
 
 const settings = loadSettings()
+
+// Transparent (OBS) mode needs an ARGB (depth-32) X11 window. Chromium only
+// picks a 32-bit visual on its own when a compositing manager owns
+// _NET_WM_CM_S0; a bare X session (no picom/compositor) has none, so Chromium
+// silently falls back to depth-24 and `transparent: true` is ignored. Force
+// the ARGB visual. OBS's XComposite capture does its own compositing, so a
+// desktop compositor isn't required — the window just needs to BE depth-32 for
+// OBS to read its alpha. Must be set before the app is ready.
+if (settings.transparent === true) {
+  app.commandLine.appendSwitch('enable-transparent-visuals')
+}
 
 // Session cwd — the shell-style working directory shared by the in-app console
 // and the HTTP command server. Survives renderer reload (`restart`).
@@ -219,8 +235,19 @@ function startCommandServer() {
 }
 
 function createWindow() {
+  // Transparent (OBS) mode: a transparent BrowserWindow is created with a
+  // depth-32 ARGB X11 visual, which is what OBS's XComposite capture needs to
+  // read real alpha (a normal depth-24 window makes OBS force the frame
+  // opaque). Linux/X11 transparency requires a frameless window, and the flag
+  // must be applied at creation. Enable per-instance via `"transparent": true`
+  // in ~/.smol; the renderer then turns on canvas3d.transparentBackground.
+  const transparentMode = settings.transparent === true
+
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    ...(transparentMode
+      ? { transparent: true, frame: false, backgroundColor: '#00000000', hasShadow: false }
+      : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       // Allow fetch() from the renderer to local files (file://) and
@@ -243,7 +270,7 @@ function createWindow() {
   win.setMenuBarVisibility(false)
 
   // Register zoom keyboard shortcuts
-  registerZoomShortcuts(win)
+  registerZoomShortcuts()
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
@@ -265,7 +292,7 @@ function createWindow() {
   }
 }
 
-function registerZoomShortcuts(_window: BrowserWindow) {
+function registerZoomShortcuts() {
   // Note: Ctrl+= and Ctrl+- conflict with Chrome's built-in zoom shortcuts
   // and cannot be reliably overridden in Electron. All zoom shortcuts have been removed.
   // Chrome's native zoom shortcuts will still work for page zoom.
